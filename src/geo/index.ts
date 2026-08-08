@@ -16,5 +16,4 @@ export {
   initPMTilesProtocol,
   createPMTilesSource,
   checkPMTilesAvailable,
-  getPMTilesMetadata,
 } from './pmtiles';

@@ -3,7 +3,8 @@ import { Map as MapLibreMap, NavigationControl, StyleSpecification } from 'mapli
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zoneConfig from '../../config/zone.json';
 import scoringConfig from '../../config/scoring.json';
-import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId } from './layers';
+import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId, LIDAR_LAYERS, LIDAR_LAYER_IDS, LidarLayerId } from './layers';
+import { initPMTilesProtocol, createPMTilesSource } from '../geo/pmtiles';
 import { ScoringLayer } from '../scoring/ScoringLayer';
 import type { ScoreCell } from '../scoring/types';
 
@@ -11,6 +12,8 @@ interface MapState {
   baseLayer: string;
   activeHistoricLayer: HistoricLayerId | null;
   historicOpacity: number;
+  activeLidarLayer: LidarLayerId | null;
+  lidarOpacity: number;
   center: [number, number];
   zoom: number;
   pitch: number;
@@ -111,23 +114,28 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   }, []);
 
   const [mapState, setMapState] = useState<MapState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        // Malformed storage, reset
-      }
-    }
-    return {
+    const defaults: MapState = {
       baseLayer: BASEMAP_DEFAULTS.default,
       activeHistoricLayer: null,
       historicOpacity: 0.5,
+      activeLidarLayer: null,
+      lidarOpacity: 0.7,
       center: zoneConfig.center as [number, number],
       zoom: zoneConfig.defaultZoom,
       pitch: 0,
       bearing: 0,
     };
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        // Fusion avec les defaults : un état sauvegardé par une version
+        // antérieure n'a pas les champs ajoutés depuis (ex. couches LiDAR).
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch {
+        // Malformed storage, reset
+      }
+    }
+    return defaults;
   });
 
   // Sauvegarder l'état à chaque changement
@@ -294,6 +302,48 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     mapInstance.setPaintProperty('historic-layer', 'raster-opacity', mapState.historicOpacity);
   }, [mapInstance, mapState.historicOpacity, mapState.activeHistoricLayer]);
 
+  // Couche relief LiDAR (PMTiles distant) — même mécanique que l'historique
+  useEffect(() => {
+    const instance = mapInstance;
+    if (!instance) return;
+
+    const lidarId = mapState.activeLidarLayer;
+    const apply = () => {
+      if (instance.getLayer('lidar-layer')) instance.removeLayer('lidar-layer');
+      if (instance.getSource('lidar-raster')) instance.removeSource('lidar-raster');
+      if (!lidarId) return;
+      const def = LIDAR_LAYERS[lidarId];
+      if (!def) return;
+
+      initPMTilesProtocol(); // idempotent — nécessaire si MapView monté hors AppShell
+      instance.addSource('lidar-raster', {
+        ...createPMTilesSource(def.pmtilesUrl),
+        attribution: def.attribution,
+      });
+      // Au-dessus des rasters (fond + historique), sous les couches vectorielles
+      const firstNonRaster = instance.getStyle().layers.find((l) => l.type !== 'raster')?.id;
+      instance.addLayer(
+        {
+          id: 'lidar-layer',
+          type: 'raster',
+          source: 'lidar-raster',
+          paint: { 'raster-opacity': mapState.lidarOpacity },
+        },
+        firstNonRaster
+      );
+    };
+
+    whenStyleReady(instance, apply);
+    // l'opacité a son propre effet, comme pour la couche historique
+  }, [mapInstance, mapState.activeLidarLayer]);
+
+  // Mettre à jour l'opacité de la couche LiDAR
+  useEffect(() => {
+    if (!mapInstance || !mapState.activeLidarLayer) return;
+    if (!mapInstance.getLayer('lidar-layer')) return;
+    mapInstance.setPaintProperty('lidar-layer', 'raster-opacity', mapState.lidarOpacity);
+  }, [mapInstance, mapState.lidarOpacity, mapState.activeLidarLayer]);
+
   const handleBaseLayerChange = (layerId: string) => {
     setMapState((prev) => ({ ...prev, baseLayer: layerId }));
   };
@@ -305,6 +355,15 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   const handleOpacityChange = (opacity: number) => {
     const clampedOpacity = Math.max(0, Math.min(1, opacity));
     setMapState((prev) => ({ ...prev, historicOpacity: clampedOpacity }));
+  };
+
+  const handleLidarLayerChange = (layerId: LidarLayerId | null) => {
+    setMapState((prev) => ({ ...prev, activeLidarLayer: layerId }));
+  };
+
+  const handleLidarOpacityChange = (opacity: number) => {
+    const clamped = Math.max(0, Math.min(1, opacity));
+    setMapState((prev) => ({ ...prev, lidarOpacity: clamped }));
   };
 
   // Notify parent of cell selection
@@ -391,6 +450,47 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
             })}
           </select>
         </div>
+
+        {/* Sélecteur de couche relief LiDAR */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <label style={{ fontSize: '12px', color: '#666' }}>Relief:</label>
+          <select
+            value={mapState.activeLidarLayer || ''}
+            onChange={(e) => handleLidarLayerChange((e.target.value || null) as LidarLayerId | null)}
+            style={{
+              padding: '6px 10px',
+              fontSize: '13px',
+              borderRadius: '4px',
+              border: '1px solid #999',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">— Aucun —</option>
+            {LIDAR_LAYER_IDS.map((layerId) => (
+              <option key={layerId} value={layerId}>
+                {LIDAR_LAYERS[layerId]?.label ?? layerId}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Curseur d'opacité relief */}
+        {mapState.activeLidarLayer && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12px', color: '#666' }}>Opacité relief:</label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(mapState.lidarOpacity * 100)}
+              onChange={(e) => handleLidarOpacityChange(parseInt(e.target.value, 10) / 100)}
+              style={{ width: '100px', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '12px', color: '#666', width: '30px' }}>
+              {Math.round(mapState.lidarOpacity * 100)}%
+            </span>
+          </div>
+        )}
 
         {/* Curseur d'opacité */}
         {mapState.activeHistoricLayer && (

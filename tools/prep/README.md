@@ -33,24 +33,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Vérifier les dépendances système
+### 2. Dépendances système
 
-```bash
-# macOS
-brew install gdal pmtiles
-gdal-config --version
-gdalinfo --version
-gdal2tiles.py --version
-pmtiles --version
-```
+**Aucune.** Depuis l'exécution réelle (2026-08-08), le pipeline est 100 % pur
+Python : rasterio (GDAL embarqué dans la wheel), rvt-py (SVF/LRM/openness,
+Apache 2.0), mercantile + Pillow (tuilage), pmtiles (conteneur). Ni binaire
+GDAL, ni gh CLI, ni droits admin. Les dépendances vivent dans `.venv`
+(requirements.txt ; rvt-py installé `--no-deps` pour éviter qu'il ne tire
+les bindings GDAL système).
 
-### 3. Charge de travail requise
+### 3. Charge de travail réelle (mesurée, emprise `lidarBbox` = 64 dalles)
 
-- **Espace disque** : ≥ 10 Go libres (MNT LiDAR ~2 Go, dérivés/intermédiaires ~3-5 Go)
-- **Temps de calcul** : 
-  - Téléchargement : 20-60 min (dépend du réseau et de la couverture)
-  - Reprojection + dérivés : 30-45 min
-  - PMTiles : 10-15 min par couche
+- **Espace disque** : ~2,5 Go (dalles MNT ~1 Go, dérivés + tuiles ~1,5 Go).
+  L'emprise traitée est `lidarBbox` de config/zone.json (commune + 2 km),
+  PAS `bbox` (~6× plus grande) — élargir lidarBbox si besoin et relancer.
+- **Temps** : téléchargement ~30 min (WMS-R génère chaque GeoTIFF à la volée) ;
+  dérivés + reprojection ~15 min ; PMTiles ~5 min.
 
 ## Usage — Exécution complète
 
@@ -69,14 +67,17 @@ python3 download_mnt.py
 ```
 
 Résultat :
-- `data/derived/mnt_lidar_raw.vrt` (mosaïque virtuelle, EPSG:2154)
-- `tools/prep/logs/download_mnt.txt` (liste des dalles, URLs testées, tailles)
+- `data/derived/mnt_tiles/*.tif` (dalles GeoTIFF 1 km², 0,5 m, EPSG:2154)
+- `tools/prep/logs/download_mnt.txt` (liste des dalles, tailles)
 
-**Notes** :
-- Bloquant phase 3 : vérifier que le Gers est couvert en LiDAR HD.
-  Carte de suivi : https://macarte.ign.fr/carte/mThSup/diffusionMNxLiDARHD
-- Si **absent** → repli sur RGE ALTI 1 m (non implémenté, voir PLAN.md §4.2)
-- Commandes testées : `curl -4` (IPv6 bloqué sur Mac)
+**Notes (vérifié 2026-08-08)** :
+- Le Gers/Armous-et-Cau **est couvert** : 64 dalles sur l'emprise `lidarBbox`.
+- Découverte via WFS `IGNF_MNT-LIDAR-HD:dalle` — BBOX en **lat,lon** avec CRS
+  urn (l'ordre lon,lat renvoie 0 dalle sans erreur).
+- L'IGN sert directement le **GeoTIFF raster** (WMS-R GetMap image/geotiff,
+  2000×2000 px) — pas de nuage de points COPC.LAZ à traiter.
+- Téléchargement en `curl -4` (IPv6 bloqué sur Mac). Pas de VRT : derive.py
+  lit les dalles via rasterio.merge sur fenêtres tamponnées.
 
 **Étape 2 : Générer les dérivés du MNT**
 
@@ -92,15 +93,16 @@ Résult :
 
 Tous en EPSG:3857 (Web Mercator), compressés en deflate.
 
-**Algorithmes** :
-- **Hillshade** : pente + aspect, 8 azimuts solaires (315°, 45° élévation)
-- **SVF** : fenêtre 10×10 pixels (~5 m sur MNT 0,5 m)
-- **LRM** : filtre gaussien σ=10 pixels (~20 m), booste micro-reliefs
-- **Openness** : détecte crêtes (>0) et vallées (<0)
+**Algorithmes** (tous via rvt-py, obligatoire — plus de repli numpy) :
+- **Hillshade** : `rvt.vis.multi_hillshade` 8 azimuts, élévation 45°, moyennés.
+  Gotcha vérifié : la sortie perd 1 px de bord → repad NaN pour réaligner.
+- **SVF** : `rvt.vis.sky_view_factor`, 16 directions, r_max 10 px (5 m)
+- **LRM** : `rvt.vis.slrm`, rayon 40 px (20 m)
+- **Openness** : openness positive, étirée [55°..95°] → [0..1] (contraste archéo)
 
-**Note rvt-py** :
-- Si détecté : SVF/LRM/openness via rvt-py (publications Zakšek/Hesse)
-- Si absent : implémentations numpy (moins précises)
+Traitement dalle par dalle avec tampon de 64 px lu chez les voisines
+(pas de couture, jamais plus d'une dalle float32 en RAM), puis mosaïque
+uint8 et reprojection rasterio.warp 2154 → 3857.
 
 Licence rvt-py : ✓ Apache 2.0 (permissive) → utilisable en dépendance
 

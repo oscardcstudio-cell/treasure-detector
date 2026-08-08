@@ -1,161 +1,106 @@
 #!/usr/bin/env python3
 """
-T3.1 — Exporter les dérivés en PMTiles (étape 3/4).
+T3.1 — Export PMTiles des dérivés LiDAR (étape 3/3).
 
-PMTiles est un format de conteneur raster single-file:
-  - Une requête = plage d'octets (Range: bytes=X-Y)
-  - Fonctionne en offline et sans serveur de tuiles
-  - MapLibre GL JS charge nativement les PMTiles
+Entrée : data/derived/{hillshade,svf,lrm,openness}.tif (uint8, EPSG:3857).
+Sortie : data/derived/{...}.pmtiles (PNG niveaux de gris + alpha, z11–17).
 
-Pipeline:
-  1. Pour chaque couche dérivée (hillshade, svf, lrm, openness):
-     - Découper en tuiles (z12-17)
-     - Compresser (WebP pour les tuiles raster, avec dégradation minimale)
-     - Empiler en PMTiles via CLI pmtiles
+Pur Python (pas de gdal2tiles ni de binaire pmtiles) :
+  - découpage XYZ via mercantile + lectures fenêtrées rasterio (boundless)
+  - encodage PNG via Pillow (mode LA : gris + alpha, nodata=0 → transparent)
+  - conteneur via pmtiles.writer (tuiles écrites triées par tileid — requis
+    par le format, le writer ne trie pas lui-même)
 
-  2. Vérifier que les PMTiles sont accessibles en Range requests
-     (obligatoire pour MapLibre)
-
-Sorties:
-  - data/derived/hillshade.pmtiles (z12-17)
-  - data/derived/svf.pmtiles (z12-17)
-  - data/derived/lrm.pmtiles (z12-17)
-  - data/derived/openness.pmtiles (z12-17)
-
-Outils:
-  - gdal2tiles ou rio cogeo (générer des tuiles GeoTIFF)
-  - pmtiles CLI (assembler en conteneur)
-  - curl -H 'Range: ...' (vérifier l'accès par plage d'octets)
+Publication : GitHub Release (jamais dans git — repo public, artefacts lourds).
 """
 
 import sys
-import subprocess
+from io import BytesIO
 from pathlib import Path
-import os
+
+import mercantile
+import numpy as np
+import rasterio
+from PIL import Image
+from pmtiles.tile import Compression, TileType, zxy_to_tileid
+from pmtiles.writer import Writer
+from rasterio.enums import Resampling
+from rasterio.warp import transform_bounds
+from rasterio.windows import from_bounds as window_from_bounds
+from tqdm import tqdm
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = REPO_ROOT / "data" / "derived"
 
-LAYERS = ["hillshade", "svf", "lrm", "openness"]
-MIN_ZOOM = 12
-MAX_ZOOM = 17
+LAYERS = ("hillshade", "svf", "lrm", "openness")
+MIN_ZOOM, MAX_ZOOM = 11, 17
+TILE_SIZE = 256
 
-def gdal2tiles_to_pmtiles(tif_file: Path, pmtiles_output: Path) -> bool:
-    """
-    Convertir un GeoTIFF en PMTiles via gdal2tiles + pmtiles CLI.
 
-    Étapes:
-    1. gdal2tiles.py -z 12-17 -w none input.tif output_tiles/
-    2. pmtiles convert output_tiles output.pmtiles
-    """
+def render_tile(src, tile):
+    """Lire la fenêtre du raster couvrant la tuile → PNG LA, None si vide."""
+    xb = mercantile.xy_bounds(tile)
+    window = window_from_bounds(xb.left, xb.bottom, xb.right, xb.top,
+                                transform=src.transform)
+    data = src.read(1, window=window, out_shape=(TILE_SIZE, TILE_SIZE),
+                    boundless=True, fill_value=0, resampling=Resampling.bilinear)
+    if not data.any():
+        return None
+    alpha = np.where(data == 0, 0, 255).astype(np.uint8)
+    img = Image.fromarray(np.dstack([data, alpha]), mode="LA")
+    buf = BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
-    temp_tiles_dir = DATA_DIR / f"tiles_{pmtiles_output.stem}"
 
-    # Étape 1: gdal2tiles
-    print(f"  gdal2tiles: {tif_file.name} → {temp_tiles_dir.name}/")
-    cmd = [
-        "gdal2tiles.py",
-        "-z", f"{MIN_ZOOM}-{MAX_ZOOM}",
-        "-w", "none",
-        "-b", "1",  # Une seule bande (les dérivés sont monochromes)
-        "-co", "COMPRESS=webp",
-        "-co", "QUALITY=80",
-        str(tif_file),
-        str(temp_tiles_dir)
-    ]
+def build_pmtiles(layer):
+    tif = DATA_DIR / f"{layer}.tif"
+    if not tif.exists():
+        print(f"  ! {tif.name} absent — exécuter derive.py d'abord.")
+        return None
+    out = DATA_DIR / f"{layer}.pmtiles"
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"    ERREUR: {result.stderr[:200]}")
-        return False
+    with rasterio.open(tif) as src:
+        w, s, e, n = transform_bounds(src.crs, "EPSG:4326", *src.bounds)
+        jobs = []
+        for z in range(MIN_ZOOM, MAX_ZOOM + 1):
+            for t in mercantile.tiles(w, s, e, n, [z]):
+                jobs.append((zxy_to_tileid(t.z, t.x, t.y), t))
+        jobs.sort(key=lambda j: j[0])  # ordre tileid requis par le format
 
-    # Étape 2: pmtiles convert
-    print(f"  pmtiles convert: {temp_tiles_dir.name}/ → {pmtiles_output.name}")
-    cmd = ["pmtiles", "convert", str(temp_tiles_dir), str(pmtiles_output)]
+        written = 0
+        with open(out, "wb") as f:
+            writer = Writer(f)
+            for tileid, t in tqdm(jobs, desc=layer, leave=False):
+                png = render_tile(src, t)
+                if png:
+                    writer.write_tile(tileid, png)
+                    written += 1
+            header = {
+                "tile_type": TileType.PNG,
+                "tile_compression": Compression.NONE,
+                "min_zoom": MIN_ZOOM, "max_zoom": MAX_ZOOM,
+                "min_lon_e7": int(w * 1e7), "min_lat_e7": int(s * 1e7),
+                "max_lon_e7": int(e * 1e7), "max_lat_e7": int(n * 1e7),
+                "center_zoom": 14,
+                "center_lon_e7": int((w + e) / 2 * 1e7),
+                "center_lat_e7": int((s + n) / 2 * 1e7),
+            }
+            metadata = {"name": f"lidar-{layer}", "attribution": "IGN LiDAR HD",
+                        "format": "png"}
+            writer.finalize(header, metadata)
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"    ERREUR: {result.stderr[:200]}")
-        return False
+    print(f"  ✓ {out.name}: {written} tuiles, {out.stat().st_size / 1e6:.1f} MB")
+    return out
 
-    # Nettoyage
-    import shutil
-    shutil.rmtree(temp_tiles_dir, ignore_errors=True)
 
-    return True
-
-def verify_pmtiles_range_request(pmtiles_path: Path) -> bool:
-    """
-    Vérifier que le fichier PMTiles supporte les Range requests.
-
-    MapLibre nécessite Accept-Ranges + Range request support.
-    """
-    cmd = ["curl", "-I", "-H", "Range: bytes=0-99", f"file://{pmtiles_path}"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    # curl sur file:// ne supporte pas les headers Range, donc ce test est limité.
-    # La vraie vérification se fait sur Railway (voir docs/CONTRACTS.md §5.3).
-
-    print(f"  Fichier: {pmtiles_path.name} ({pmtiles_path.stat().st_size / (1024**2):.1f} MB)")
-    return True
-
-def main():
-    print("=" * 70)
-    print("T3.1 — Pipeline LiDAR HD (étape 3/4: PMTiles)")
-    print("=" * 70)
-
-    DATA_DIR.mkdir(exist_ok=True, parents=True)
-
-    # Vérifier que les couches dérivées existent
-    missing = [l for l in LAYERS if not (DATA_DIR / f"{l}.tif").exists()]
-    if missing:
-        print(f"ERREUR: Couches manquantes: {missing}")
-        print("Exécuter derive.py d'abord.")
+def main() -> int:
+    outputs = [build_pmtiles(layer) for layer in LAYERS]
+    if not all(outputs):
         return 1
+    print("\nPublication : gh release create (voir README).")
+    return 0
 
-    print(f"\nExport en PMTiles (z{MIN_ZOOM}-{MAX_ZOOM})...\n")
-
-    generated = []
-    failed = []
-
-    for layer in LAYERS:
-        tif_file = DATA_DIR / f"{layer}.tif"
-        pmtiles_file = DATA_DIR / f"{layer}.pmtiles"
-
-        print(f"{layer}:")
-        if gdal2tiles_to_pmtiles(tif_file, pmtiles_file):
-            verify_pmtiles_range_request(pmtiles_file)
-            generated.append(pmtiles_file)
-            print(f"  ✓ {pmtiles_file.name}\n")
-        else:
-            failed.append((layer, tif_file))
-            print(f"  ✗ ÉCHOUÉ\n")
-
-    print(f"\n✓ Pipeline étape 3 terminée")
-    print(f"  PMTiles générés: {len(generated)}/{len(LAYERS)}")
-    for f in generated:
-        size_mb = f.stat().st_size / (1024**2)
-        print(f"    - {f.name}: {size_mb:.1f} MB")
-
-    if failed:
-        print(f"\n⚠️  {len(failed)} couches en échec:")
-        for layer, tif in failed:
-            print(f"    - {layer}")
-
-    return 0 if not failed else 1
 
 if __name__ == "__main__":
-    # Vérifier les dépendances
-    deps = ["gdal2tiles.py", "pmtiles", "curl"]
-    missing_deps = []
-    for dep in deps:
-        result = subprocess.run(["which", dep], capture_output=True)
-        if result.returncode != 0:
-            missing_deps.append(dep)
-
-    if missing_deps:
-        print(f"⚠️  Dépendances manquantes: {missing_deps}")
-        print("   Installation (macOS): brew install gdal pmtiles")
-        sys.exit(1)
-
     sys.exit(main())

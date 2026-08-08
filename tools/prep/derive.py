@@ -1,278 +1,154 @@
 #!/usr/bin/env python3
 """
-T3.1 — Générer les dérivés du MNT LiDAR HD (2/4).
+T3.1 — Dérivés de visualisation archéo du MNT LiDAR HD (étape 2/3).
 
-À partir d'une mosaïque VRT reprojetée en EPSG:3857 (Web Mercator),
-générer les couches de visualisation:
-  1. Hillshade multidirectionnel (8 azimuts)
-  2. Sky-View Factor (SVF)
-  3. Local Relief Model (LRM)
-  4. Openness (positif)
+Entrée : data/derived/mnt_tiles/*.tif (dalles 1 km², 0,5 m, EPSG:2154).
+Sortie : data/derived/{hillshade,svf,lrm,openness}.tif (uint8, EPSG:3857).
 
-Algorithmes:
-  - Hillshade: slope + aspect + 8 directions solaires (20°, 45°, 270° élévation)
-  - SVF: Zakšek et al. 2011 "Sky-View Factor as a Relief Visualization Technique"
-    → Mesure la fraction du ciel visible depuis chaque point (0..1)
-    → Fenêtre typique: 10×10 pixels (5 m sur un MNT 0,5 m)
-  - LRM: Hesse 2010 "Local Relief Model" (différence entre MNT et filtre gaussien)
-    → Fenêtre: ~20 m (40 pixels sur 0,5 m), booste les micro-reliefs
-  - Openness: moyenne pondérée des pentes (détecte les vallées = négatif)
+Tout en pur Python (rasterio + rvt-py Apache 2.0) — aucun binaire GDAL requis :
+  - hillshade : moyenne de rvt.vis.multi_hillshade 8 azimuts, élévation 45°
+  - svf       : rvt.vis.sky_view_factor (Zakšek et al. 2011), r_max 10 px (5 m)
+  - lrm       : rvt.vis.slrm (Hesse 2010), rayon 40 px (20 m)
+  - openness  : rvt.vis.sky_view_factor(compute_opns=True), openness positive
 
-Implementation:
-  - rvt-py si licence permissive (à vérifier)
-  - Sinon: réimplémentation numpy/rasterio depuis les publications
-  - Entrée: data/derived/mnt_lidar_raw.vrt (Lambert-93)
-  - Reprojet en EPSG:3857 (Web Mercator) pour MapLibre
-  - Sortie: data/derived/{hillshade, svf, lrm, openness}.tif (uint8, z12-17)
-
-Références:
-  - Zakšek, K., Oštir, K., & Kokalj, Ž. (2011). Sky-View Factor as a Relief
-    Visualization Technique. Remote Sensing, 3(2), 398–415.
-  - Hesse, R. (2010). Landform classification with local relief. Journal of Maps, 6(1), 126-138.
-  - rvt-py: https://github.com/EarthObservation/rvt-py (vérifier licence)
+Stratégie mémoire : traitement dalle par dalle avec un tampon de 64 px lu chez
+les voisines (rasterio.merge sur la fenêtre élargie) pour éviter les coutures,
+puis mosaïque uint8 de chaque dérivé et reprojection EPSG:2154 → 3857 via
+rasterio.warp. Jamais plus d'une dalle float32 en RAM.
 """
 
 import sys
-import json
 from pathlib import Path
-from typing import Optional
+
 import numpy as np
 import rasterio
-from rasterio.io import MemoryFile
-from rasterio.enums import Resampling
-from rasterio.transform import from_bounds
-from scipy.ndimage import gaussian_filter
+import rvt.vis
+from rasterio.merge import merge as rio_merge
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from tqdm import tqdm
-
-# Essayer rvt-py (si licence permissive)
-try:
-    import rvt.terrain_analysis as ta
-    HAS_RVT = True
-except ImportError:
-    HAS_RVT = False
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = REPO_ROOT / "data" / "derived"
-MNT_VRT = DATA_DIR / "mnt_lidar_raw.vrt"
+TILES_DIR = DATA_DIR / "mnt_tiles"
 
-def reproject_to_web_mercator(src_path: Path) -> Optional[Path]:
-    """
-    Reprojeter le MNT de EPSG:2154 (Lambert-93) en EPSG:3857 (Web Mercator).
+BUFFER_PX = 64          # > 2× le plus grand rayon d'analyse (40 px)
+RES = 0.5               # m/px, MNT LiDAR HD
+NODATA_IN = -9999.0
 
-    Sortie: data/derived/mnt_lidar_3857.tif
-    """
-    output = DATA_DIR / "mnt_lidar_3857.tif"
+LAYERS = ("hillshade", "svf", "lrm", "openness")
 
-    if output.exists():
-        print(f"Déjà reprojeté: {output}")
-        return output
 
-    import subprocess
-    cmd = [
-        "gdalwarp",
-        "-s_srs", "EPSG:2154",
-        "-t_srs", "EPSG:3857",
-        "-r", "bilinear",  # Interpolation pour perte de résolution
-        "-dstnodata", "-32768",
-        "-co", "COMPRESS=deflate",
-        "-co", "TILED=YES",
-        "-co", "BLOCKXSIZE=512",
-        "-co", "BLOCKYSIZE=512",
-        str(src_path),
-        str(output)
-    ]
+def compute_derivatives(dem: np.ndarray) -> dict:
+    """dem float32 (NaN = nodata) → 4 arrays float [0..1]."""
+    hs = rvt.vis.multi_hillshade(dem, RES, RES, nr_directions=8, sun_elevation=45,
+                                 no_data=np.nan)
+    # multi_hillshade rogne 1 px de bord (vérifié) — repad NaN pour réaligner
+    hillshade = np.pad(np.nanmean(hs, axis=0), 1, constant_values=np.nan)
 
-    print(f"Reprojection vers EPSG:3857...")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"ERREUR gdalwarp: {result.stderr}")
-        return None
+    svf_out = rvt.vis.sky_view_factor(dem, RES, compute_svf=True, compute_opns=True,
+                                      svf_n_dir=16, svf_r_max=10, no_data=np.nan)
+    svf = svf_out["svf"]                          # [0..1]
+    # openness positive en degrés, ~[55..95] utile → étirement standard archéo
+    opns = np.clip((svf_out["opns"] - 55.0) / 40.0, 0, 1)
 
-    return output
+    lrm = rvt.vis.slrm(dem, radius_cell=40, no_data=np.nan)
+    # LRM en mètres, centré sur 0 ; ±1 m couvre les micro-reliefs recherchés
+    lrm = np.clip((lrm + 1.0) / 2.0, 0, 1)
 
-def compute_hillshade(dem: np.ndarray, resolution: float, azimuth: float = 315.0, elevation: float = 45.0) -> np.ndarray:
-    """
-    Calcul du hillshade sur 8 directions azimutales (multidirectionnel).
+    return {"hillshade": hillshade, "svf": svf, "lrm": lrm, "openness": opns}
 
-    dem: array 2D (MNT)
-    resolution: taille du pixel en mètres
-    Retour: uint8 [0..255]
-    """
-    # Référence: GDAL gdaldem hillshade
-    from scipy.ndimage import sobel
 
-    # Gradients
-    x = sobel(dem, axis=1) / (8 * resolution)
-    y = sobel(dem, axis=0) / (8 * resolution)
+def to_uint8(arr: np.ndarray) -> np.ndarray:
+    """float [0..1] avec NaN → uint8, 0 réservé au nodata."""
+    out = np.clip(np.nan_to_num(arr, nan=0.0), 0, 1) * 254 + 1
+    out[np.isnan(arr)] = 0
+    return out.astype(np.uint8)
 
-    # Slope et aspect
-    slope = np.pi / 2 - np.arctan(np.sqrt(x**2 + y**2))
-    aspect = np.arctan2(-x, y)
 
-    # Illumination multi-azimut (moyenne de 8 directions)
-    azimuths = np.linspace(0, 2*np.pi, 9)[:-1]
-    shades = []
+def process_tiles(tile_paths: list):
+    """Générer les 4 dérivés dalle par dalle (tampon lu chez les voisines)."""
+    out_dirs = {}
+    for layer in LAYERS:
+        d = DATA_DIR / f"_{layer}_tiles"
+        d.mkdir(exist_ok=True, parents=True)
+        out_dirs[layer] = d
 
-    for az in azimuths:
-        shaded = np.sin(slope) * np.cos(np.radians(elevation)) * np.cos(az - aspect) + \
-                 np.cos(slope) * np.sin(np.radians(elevation))
-        shades.append(shaded)
+    srcs = [rasterio.open(p) for p in tile_paths]
+    try:
+        for p in tqdm(tile_paths, desc="Dalles"):
+            with rasterio.open(p) as tile:
+                b = tile.bounds
+                buf = BUFFER_PX * RES
+                window_bounds = (b.left - buf, b.bottom - buf, b.right + buf, b.top + buf)
+                merged, transform = rio_merge(
+                    srcs, bounds=window_bounds, res=(RES, RES), nodata=NODATA_IN)
+                dem = merged[0].astype(np.float32)
+                dem[dem == NODATA_IN] = np.nan
 
-    hillshade = np.mean(shades, axis=0)
-    hillshade = (hillshade + 1) / 2  # Normaliser [0..1]
-    return (hillshade * 255).astype(np.uint8)
+                derived = compute_derivatives(dem)
 
-def compute_svf(dem: np.ndarray, radius: int = 10) -> np.ndarray:
-    """
-    Sky-View Factor (Zakšek et al. 2011).
+                profile = tile.profile.copy()
+                profile.update(dtype="uint8", count=1, nodata=0,
+                               compress="deflate", tiled=True,
+                               blockxsize=512, blockysize=512)
+                for layer, arr in derived.items():
+                    core = to_uint8(arr[BUFFER_PX:-BUFFER_PX, BUFFER_PX:-BUFFER_PX])
+                    out = out_dirs[layer] / p.name
+                    with rasterio.open(out, "w", **profile) as dst:
+                        dst.write(core, 1)
+    finally:
+        for s in srcs:
+            s.close()
+    return out_dirs
 
-    dem: array 2D
-    radius: fenêtre d'analyse (pixels)
-    Retour: float [0..1]
-    """
-    if HAS_RVT:
-        print("  → SVF via rvt-py")
-        return ta.sky_view_factor(dem, resolution=1, radius_cell=radius)
 
-    # Réimplémentation numpy (approximation)
-    print("  → SVF via numpy (approximation)")
-    h, w = dem.shape
-    svf = np.ones_like(dem, dtype=np.float32)
+def mosaic_and_reproject(out_dirs: dict):
+    """Mosaïque uint8 de chaque dérivé puis reprojection EPSG:2154 → 3857."""
+    for layer in LAYERS:
+        tile_files = sorted(out_dirs[layer].glob("*.tif"))
+        srcs = [rasterio.open(p) for p in tile_files]
+        try:
+            merged, transform = rio_merge(srcs, nodata=0)
+        finally:
+            for s in srcs:
+                s.close()
 
-    # Fenêtre circulaire
-    y, x = np.ogrid[-radius:radius+1, -radius:radius+1]
-    mask = x**2 + y**2 <= radius**2
+        h, w = merged.shape[1], merged.shape[2]
+        src_crs = rasterio.crs.CRS.from_epsg(2154)
+        src_bounds = rasterio.transform.array_bounds(h, w, transform)
+        dst_transform, dst_w, dst_h = calculate_default_transform(
+            src_crs, "EPSG:3857", w, h, *src_bounds)
+        dst = np.zeros((dst_h, dst_w), dtype=np.uint8)
+        reproject(
+            source=merged[0], destination=dst,
+            src_transform=transform, src_crs=src_crs,
+            dst_transform=dst_transform, dst_crs="EPSG:3857",
+            src_nodata=0, dst_nodata=0, resampling=Resampling.bilinear)
 
-    for i in range(1, h-1):
-        for j in range(1, w-1):
-            # Fenêtre locale
-            i1, i2 = max(0, i-radius), min(h, i+radius+1)
-            j1, j2 = max(0, j-radius), min(w, j+radius+1)
-            local = dem[i1:i2, j1:j2]
+        out = DATA_DIR / f"{layer}.tif"
+        profile = {
+            "driver": "GTiff", "dtype": "uint8", "count": 1, "nodata": 0,
+            "width": dst_w, "height": dst_h, "crs": "EPSG:3857",
+            "transform": dst_transform, "compress": "deflate",
+            "tiled": True, "blockxsize": 512, "blockysize": 512,
+        }
+        with rasterio.open(out, "w", **profile) as f:
+            f.write(dst, 1)
+        print(f"  ✓ {out.name} ({dst_w}×{dst_h}, {out.stat().st_size / 1e6:.0f} MB)")
 
-            # Calcul simplifié: hauteur maximale visible / distance
-            # (vrai SVF nécessite 16 rayons; ici approximation)
-            heights = np.where(mask[:i2-i1, :j2-j1], dem[i1:i2, j1:j2] - dem[i, j], -np.inf)
-            max_height = np.nanmax(heights)
-            svf[i, j] = 1.0 if max_height < 0 else 0.5  # Simplifié
 
-    return svf
-
-def compute_lrm(dem: np.ndarray, sigma: float = 10) -> np.ndarray:
-    """
-    Local Relief Model (Hesse 2010).
-
-    dem: array 2D
-    sigma: écart-type du filtre gaussien (pixels, ~20 m → 40 pixels sur 0,5 m)
-    Retour: float (normalisé)
-    """
-    if HAS_RVT:
-        print("  → LRM via rvt-py")
-        return ta.local_relief_model(dem, sigma=sigma)
-
-    # Réimplémentation
-    print("  → LRM via scipy")
-    smoothed = gaussian_filter(dem.astype(np.float32), sigma=sigma, mode='constant', cval=np.nan)
-    lrm = dem - smoothed
-    # Normaliser
-    lrm_norm = (lrm - np.nanmin(lrm)) / (np.nanmax(lrm) - np.nanmin(lrm))
-    return lrm_norm
-
-def compute_openness(dem: np.ndarray, radius: int = 10) -> np.ndarray:
-    """
-    Openness (détecte crêtes = positif, vallées = négatif).
-
-    dem: array 2D
-    radius: fenêtre d'analyse
-    Retour: float [-1..1]
-    """
-    if HAS_RVT:
-        print("  → Openness via rvt-py")
-        return ta.openness(dem, radius_cell=radius, positive=True)
-
-    # Approximation: moyenne de la pente positive sur 8 directions
-    print("  → Openness via numpy (approximation)")
-    from scipy.ndimage import sobel
-    h, w = dem.shape
-    openness = np.zeros_like(dem, dtype=np.float32)
-
-    for dy in [-1, 0, 1]:
-        for dx in [-1, 0, 1]:
-            if dy == 0 and dx == 0:
-                continue
-            # Pente directionnelle
-            slope_dir = (dem - np.roll(dem, (dy, dx), axis=(0, 1))) / np.sqrt(dy**2 + dx**2)
-            openness += slope_dir
-
-    openness /= 8
-    return np.clip(openness, -1, 1)
-
-def save_layer(data: np.ndarray, output_path: Path, profile: dict):
-    """Sauvegarder une couche en GeoTIFF."""
-    profile.update(dtype=data.dtype, count=1)
-    with rasterio.open(output_path, 'w', **profile) as dst:
-        dst.write(data, 1)
-    print(f"  ✓ {output_path.name}")
-
-def main():
-    print("=" * 70)
-    print("T3.1 — Pipeline LiDAR HD (étape 2/4: dérivés du MNT)")
-    print("=" * 70)
-
-    if not MNT_VRT.exists():
-        print(f"ERREUR: MNT VRT non trouvé: {MNT_VRT}")
-        print("Exécuter download_mnt.py d'abord.")
+def main() -> int:
+    tile_paths = sorted(TILES_DIR.glob("*.tif"))
+    if not tile_paths:
+        print(f"Aucune dalle dans {TILES_DIR} — exécuter download_mnt.py d'abord.")
         return 1
+    print(f"Dalles MNT: {len(tile_paths)}")
 
-    # Reprojeter
-    mnt_3857 = reproject_to_web_mercator(MNT_VRT)
-    if not mnt_3857:
-        return 1
-
-    # Charger le MNT reprojeté
-    print(f"\nChargement MNT: {mnt_3857.name}")
-    with rasterio.open(mnt_3857) as src:
-        dem = src.read(1)
-        profile = src.profile.copy()
-
-    print(f"  Dimensions: {dem.shape}, dtype: {dem.dtype}, nodata: {profile.get('nodata', 'N/A')}")
-
-    # Masquer nodata
-    dem = dem.astype(np.float32)
-    dem[dem == profile.get('nodata', -32768)] = np.nan
-
-    # Générer dérivés
-    print(f"\nGénération des dérivés...")
-
-    print("1. Hillshade multidirectionnel")
-    hillshade = compute_hillshade(dem, resolution=0.5)  # Résolution MNT 0,5 m (approximatif après reprojection)
-    save_layer(hillshade, DATA_DIR / "hillshade.tif", profile)
-
-    print("2. Sky-View Factor")
-    svf = compute_svf(dem, radius=10)
-    svf = (svf * 255).astype(np.uint8)
-    save_layer(svf, DATA_DIR / "svf.tif", profile)
-
-    print("3. Local Relief Model")
-    lrm = compute_lrm(dem, sigma=10)
-    lrm = (lrm * 255).astype(np.uint8)
-    save_layer(lrm, DATA_DIR / "lrm.tif", profile)
-
-    print("4. Openness")
-    openness = compute_openness(dem, radius=10)
-    openness = ((openness + 1) * 127.5).astype(np.uint8)
-    save_layer(openness, DATA_DIR / "openness.tif", profile)
-
-    print(f"\n✓ Pipeline étape 2 terminée")
-    print(f"  Dérivés générés: 4 couches")
-
+    out_dirs = process_tiles(tile_paths)
+    print("Mosaïque + reprojection EPSG:3857...")
+    mosaic_and_reproject(out_dirs)
     return 0
 
-if __name__ == "__main__":
-    # Afficher l'avertissement sur rvt-py
-    if HAS_RVT:
-        print("ℹ  rvt-py trouvé (utilisé pour SVF, LRM, openness)")
-    else:
-        print("⚠️  rvt-py non trouvé → implémentations numpy (moins précises)")
 
+if __name__ == "__main__":
     sys.exit(main())

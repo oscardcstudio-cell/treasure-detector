@@ -1,247 +1,134 @@
 #!/usr/bin/env python3
 """
-T3.1 — Télécharger les dalles MNT LiDAR HD (0,5 m) couvrant la zone.
+T3.1 — Télécharger les dalles MNT LiDAR HD (0,5 m) couvrant la zone (étape 1/3).
 
-Pipeline :
-  1. Charger config/zone.json (bbox en WGS84)
-  2. Découvrir les dalles couvrant la bbox auprès de la géoplateforme IGN
-  3. Télécharger chaque dalle COPC.LAZ avec reprise
-  4. Assembler en mosaïque VRT (EPSG:2154)
-  5. Exporter statistics (gdalinfo)
-
-NOTE: Machine locale uniquement. Le proxy bloc data.geopf.fr depuis les conteneurs.
-      Commande obligatoire: curl -4 (IPv6 bloqué sur la machine).
-
-Références:
-  - Géoplateforme: https://data.geopf.fr/
-  - Découverte des dalles: WFS GetCapabilities, ou interface interactive.
-  - MNT LiDAR HD: COPC.LAZ, 1 km × 1 km, ~200 Mo, EPSG:2154 (Lambert-93)
+Méthode réelle (vérifiée 2026-08-08, machine locale) :
+  1. Charger config/zone.json → `lidarBbox` (WGS84), repli sur `bbox`.
+  2. Découvrir les dalles via le WFS Géoplateforme, couche `IGNF_MNT-LIDAR-HD:dalle`.
+     ATTENTION ordre des axes : BBOX en lat,lon + CRS urn:ogc:def:crs:EPSG::4326
+     (l'ordre lon,lat renvoie silencieusement 0 dalle).
+  3. Chaque feature porte une URL WMS-R GetMap `image/geotiff` (2000×2000 px,
+     1 km², EPSG:2154) — PAS de COPC.LAZ à traiter, l'IGN sert le raster MNT.
+  4. Télécharger via curl -4 (IPv6 cassé sur cette machine) avec reprise.
+  5. Vérifier chaque dalle avec rasterio (pas de gdalinfo : GDAL CLI absent,
+     pas de droits admin — tout le pipeline est pur Python).
 
 Sortie:
-  - data/derived/mnt_lidar_raw.vrt (mosaïque VRT non reprojetée)
-  - data/derived/mnt_lidar_mosaic.tif (VRT en mémoire, reprojection à la demande)
-  - logs/download_mnt.txt (liste des dalles téléchargées, tailles, URLs testées)
+  - data/derived/mnt_tiles/*.tif   (dalles MNT EPSG:2154, gitignorées)
+  - tools/prep/logs/download_mnt.txt
+
+La mosaïque n'est PAS construite ici (pas de gdalbuildvrt) : derive.py lit les
+dalles directement via rasterio.merge sur des fenêtres tamponnées.
 """
 
 import json
-import os
-import sys
 import subprocess
-import tempfile
-from pathlib import Path
-from typing import List, Tuple
+import sys
 from datetime import datetime
+from pathlib import Path
 
 import requests
-from tqdm import tqdm
 
-# Configuration
 REPO_ROOT = Path(__file__).parent.parent.parent
 CONFIG_FILE = REPO_ROOT / "config" / "zone.json"
-DATA_DIR = REPO_ROOT / "data" / "derived"
+TILES_DIR = REPO_ROOT / "data" / "derived" / "mnt_tiles"
 LOGS_DIR = REPO_ROOT / "tools" / "prep" / "logs"
-TEMP_DIR = tempfile.mkdtemp(prefix="lidar_")
 
-# Endpoints IGN (à mettre à jour selon la disponibilité)
-# Optiopn A: WFS GetCapabilities pour les emprises (non testé depuis le conteneur)
-WFS_URL = "https://data.geopf.fr/private/wfs"
-# Option B: Interface de diffusion directe (chemins stables)
-# Les dalles LiDAR HD sont généralement à: https://data.geopf.fr/telechargement/<année>/mnt/
-# Exemple: https://data.geopf.fr/telechargement/2025/mnt/COPC/<dalleID>.laz
+WFS_URL = "https://data.geopf.fr/wfs/ows"
+WFS_LAYER = "IGNF_MNT-LIDAR-HD:dalle"
 
-# Pour cette session, on va découvrir les dalles manuellement via le catalogue Cartes.gouv
-# et les télécharger par URL stable.
 
-def load_zone_config():
-    """Charger bbox et metadata de config/zone.json"""
-    if not CONFIG_FILE.exists():
-        raise FileNotFoundError(f"Config non trouvée: {CONFIG_FILE}")
+def load_zone_config() -> dict:
     with open(CONFIG_FILE) as f:
         return json.load(f)
 
-def bbox_to_lambda93_tiles(bbox_wgs84: List[float]) -> List[str]:
-    """
-    Convertir une bbox WGS84 en liste de dalles Lambert-93 couverts.
 
-    bbox_wgs84: [west, south, east, north] en WGS84
-    Retour: liste de noms de dalles (ex. ['00_0', '00_1', ...])
-
-    NOTE: Pour le Gers, la couverture LiDAR HD est partielle (À VÉRIFIER).
-          En cas d'absence, basculer sur RGE ALTI 1 m (EPSG:2154).
-    """
-    # Conversion WGS84 → Lambert-93 (EPSG:2154)
-    # Formule approximée pour le sud-ouest français:
-    # Les dalles LiDAR sont indexées par leur coin SO en Lambert-93 (1 km × 1 km)
-    # Grille: (E in [2600..3000] × 10^3 m) × (N in [1700..2100] × 10^3 m)
-
-    import pyproj
-    proj_4326 = pyproj.Proj(init='epsg:4326')
-    proj_2154 = pyproj.Proj(init='epsg:2154')
-
-    # Convertir les coins de la bbox
+def discover_tiles(bbox_wgs84: list) -> list:
+    """Interroger la grille WFS des dalles MNT LiDAR HD → [(nom, url), ...]."""
     west, south, east, north = bbox_wgs84
-    so_2154 = pyproj.transform(proj_4326, proj_2154, west, south)
-    ne_2154 = pyproj.transform(proj_4326, proj_2154, east, north)
+    params = {
+        "SERVICE": "WFS",
+        "VERSION": "2.0.0",
+        "REQUEST": "GetFeature",
+        "TYPENAMES": WFS_LAYER,
+        # lat,lon obligatoire avec le CRS urn (sinon 0 résultat, sans erreur)
+        "BBOX": f"{south},{west},{north},{east},urn:ogc:def:crs:EPSG::4326",
+        "OUTPUTFORMAT": "application/json",
+        "COUNT": "1000",
+    }
+    r = requests.get(WFS_URL, params=params, timeout=120)
+    r.raise_for_status()
+    feats = r.json()["features"]
+    return [(f["properties"]["name_download"], f["properties"]["url"]) for f in feats]
 
-    e_min, n_min = int(so_2154[0] / 1000) * 1000, int(so_2154[1] / 1000) * 1000
-    e_max, n_max = int(ne_2154[0] / 1000 + 1) * 1000, int(ne_2154[1] / 1000 + 1) * 1000
 
-    tiles = []
-    for e in range(e_min, e_max + 1, 1000):
-        for n in range(n_min, n_max + 1, 1000):
-            # Format dalle: "XXXXXX_XXXXXX" (coordonnées Lambert-93)
-            tile_id = f"{e//1000:02d}_{n//1000:02d}"
-            tiles.append(tile_id)
-
-    return tiles
-
-def discover_tiles_cartes_gouv() -> List[Tuple[str, str]]:
-    """
-    Découvrir les dalles LiDAR HD via le catalogue Cartes.gouv.
-
-    Retour: [(nom_dalle, url_telechargement), ...]
-
-    TODO: Implémenter le parsing de cartes.gouv ou fournir une liste manuelle.
-    Pour cette phase, on va documenter les URLs réelles testées.
-    """
-    # Placeholder: à remplir avec la vraie découverte ou une liste codée.
-    # Pour Armous-et-Cau, le Gers n'est couvert QUE si la couverture HD remonte à 2026.
-    # Carte de suivi: macarte.ign.fr/carte/mThSup/diffusionMNxLiDARHD
-
-    print("[ATTENTE] Découverte des dalles MNT LiDAR HD pour le Gers...")
-    print("  Carte de suivi: https://macarte.ign.fr/carte/mThSup/diffusionMNxLiDARHD")
-    print("  À VÉRIFIER: le Gers est-il couvert en fin 2025 ? (taux couverture métro ~80%)")
-    print("  Repli: RGE ALTI 1 m si absent.")
-
-    # Pour cette session:
-    # - Si non couvert → retour []
-    # - Si couvert → URLs à documenter par curl -4 réel
-
-    return []
-
-def download_tiles(tile_urls: List[Tuple[str, str]], max_retries: int = 3):
-    """
-    Télécharger les dalles COPC.LAZ avec reprise.
-
-    Utiliser curl -4 (IPv6 bloqué sur Mac).
-    """
+def download_tiles(tiles: list, max_retries: int = 3):
+    """Télécharger chaque dalle GeoTIFF avec curl -4, reprise si déjà présente."""
+    TILES_DIR.mkdir(exist_ok=True, parents=True)
     LOGS_DIR.mkdir(exist_ok=True, parents=True)
     log_file = LOGS_DIR / "download_mnt.txt"
 
-    downloaded = []
-    failed = []
-
-    with open(log_file, 'w') as log:
-        log.write(f"Session téléchargement MNT LiDAR HD — {datetime.now().isoformat()}\n")
-        log.write(f"Zone: {CONFIG_FILE.name}\n")
-        log.write(f"Répertoire temp: {TEMP_DIR}\n\n")
-
-        for tile_name, url in tqdm(tile_urls, desc="Dalles"):
-            local_path = Path(TEMP_DIR) / f"{tile_name}.laz"
-
-            # Essayer le téléchargement avec curl -4
-            for attempt in range(max_retries):
-                cmd = [
-                    "curl", "-4", "-L", "-C", "-",  # IPv4 forcé, suivi redirects, resume
-                    "-o", str(local_path),
-                    url
-                ]
-                try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-                    if result.returncode == 0:
-                        size = local_path.stat().st_size / (1024**2)
-                        log.write(f"✓ {tile_name:12s} → {size:7.1f} MB ({url})\n")
-                        downloaded.append((tile_name, local_path, size))
-                        break
-                    else:
-                        log.write(f"✗ {tile_name:12s} attempt {attempt+1}/{max_retries}: "
-                                f"curl RC={result.returncode}, stderr={result.stderr[:100]}\n")
-                except subprocess.TimeoutExpired:
-                    log.write(f"✗ {tile_name:12s} attempt {attempt+1}/{max_retries}: timeout\n")
+    downloaded, failed = [], []
+    with open(log_file, "w") as log:
+        log.write(f"Session MNT LiDAR HD — {datetime.now().isoformat()}\n")
+        log.write(f"Dalles découvertes: {len(tiles)}\n\n")
+        for name, url in tiles:
+            out = TILES_DIR / name
+            if out.exists() and out.stat().st_size > 0:
+                downloaded.append(out)
+                log.write(f"= {name} (déjà présente)\n")
+                continue
+            ok = False
+            for _ in range(max_retries):
+                res = subprocess.run(
+                    ["curl", "-4", "-sS", "-L", "--max-time", "180", "-o", str(out), url],
+                    capture_output=True, text=True,
+                )
+                if res.returncode == 0 and out.exists() and out.stat().st_size > 0:
+                    ok = True
+                    break
+            if ok:
+                downloaded.append(out)
+                log.write(f"+ {name} ({out.stat().st_size / 1e6:.1f} MB)\n")
             else:
-                # Tous les essais échoués
-                failed.append((tile_name, url))
-                log.write(f"✗ {tile_name:12s} — DROPPED après {max_retries} tentatives\n")
-
-        log.write(f"\nRésumé:\n")
-        log.write(f"  Succès: {len(downloaded)} dalles\n")
-        log.write(f"  Échecs: {len(failed)} dalles\n")
-        total_mb = sum(s for _, _, s in downloaded)
-        log.write(f"  Volume total: {total_mb:.1f} MB\n")
-
-    print(f"\nLog écrit: {log_file}")
+                failed.append(name)
+                log.write(f"! ECHEC {name}\n")
+        log.write(f"\nSuccès: {len(downloaded)} / Échecs: {len(failed)}\n")
     return downloaded, failed
 
-def create_mosaic_vrt(downloaded: List[Tuple[str, Path, float]]):
-    """
-    Créer une VRT (Virtual Raster Mosaic) en EPSG:2154.
 
-    Entrée: liste de fichiers LAZ téléchargés
-    Sortie: data/derived/mnt_lidar_raw.vrt (mosaïque non reprojetée)
-    """
-    if not downloaded:
-        print("Aucune dalle téléchargée. Arrêt.")
-        return None
+def verify_tiles(paths: list) -> int:
+    """Ouvrir chaque dalle avec rasterio ; retirer les fichiers invalides."""
+    import rasterio
 
-    DATA_DIR.mkdir(exist_ok=True, parents=True)
-    vrt_path = DATA_DIR / "mnt_lidar_raw.vrt"
+    bad = 0
+    for p in paths:
+        try:
+            with rasterio.open(p) as src:
+                assert src.crs is not None and src.width == 2000
+        except Exception:
+            print(f"  dalle corrompue, supprimée: {p.name}")
+            p.unlink(missing_ok=True)
+            bad += 1
+    return bad
 
-    # Utiliser gdalbuildvrt
-    laz_files = [str(path) for _, path, _ in downloaded]
-    cmd = ["gdalbuildvrt", "-q", str(vrt_path)] + laz_files
 
-    print(f"Création VRT: {cmd}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"ERREUR gdalbuildvrt: {result.stderr}")
-        return None
-
-    # Afficher gdalinfo
-    print(f"\nInfo mosaïque (gdalinfo):")
-    result = subprocess.run(["gdalinfo", str(vrt_path)], capture_output=True, text=True)
-    print(result.stdout[:1000])  # Premiers 1000 chars
-
-    return vrt_path
-
-def main():
-    print("=" * 70)
-    print("T3.1 — Pipeline LiDAR HD (étape 1/4: téléchargement des dalles)")
-    print("=" * 70)
-
+def main() -> int:
     zone = load_zone_config()
-    print(f"\nZone: {zone.get('name', 'unknown')}")
-    print(f"  Bbox (WGS84): {zone['bbox']}")
-    print(f"  INSEE: {zone.get('insee', 'N/A')}")
+    bbox = zone.get("lidarBbox") or zone["bbox"]
+    print(f"Zone: {zone['name']} — bbox LiDAR {bbox}")
 
-    # Découvrir les dalles
-    tiles = discover_tiles_cartes_gouv()
-
+    tiles = discover_tiles(bbox)
     if not tiles:
-        print("\n⚠️  Aucune dalle LiDAR HD découverte.")
-        print("   Raisons possibles:")
-        print("   - Gers non couvert en fin 2025 (taux métro: 80%)")
-        print("   - Géoplateforme indisponible ou format de découverte non implémenté")
-        print("\n   Prochaine étape: repli sur RGE ALTI 1 m (voir §4.2 du PLAN.md)")
-        print("   (Non implémenté dans cette phase)")
+        print("Aucune dalle MNT LiDAR HD sur cette emprise (couverture IGN ?).")
         return 1
+    print(f"Dalles découvertes: {len(tiles)}")
 
-    print(f"\nDalles découvertes: {len(tiles)}")
-    for name, url in tiles[:3]:
-        print(f"  - {name}: {url[:60]}...")
-    if len(tiles) > 3:
-        print(f"  ... et {len(tiles)-3} autres")
-
-    # Télécharger
     downloaded, failed = download_tiles(tiles)
+    bad = verify_tiles(downloaded)
+    print(f"Téléchargées: {len(downloaded) - bad} · échecs: {len(failed)} · corrompues: {bad}")
+    return 0 if downloaded and not failed and not bad else 1
 
-    # Créer VRT
-    vrt = create_mosaic_vrt(downloaded)
-
-    print(f"\n✓ Pipeline étape 1 terminée")
-    print(f"  Dalles téléchargées: {len(downloaded)}")
-    print(f"  VRT: {vrt if vrt else 'N/A'}")
-
-    return 0 if downloaded else 1
 
 if __name__ == "__main__":
     sys.exit(main())

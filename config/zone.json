@@ -5,5 +5,7 @@
   "_notes_center": "[À VÉRIFIER] source annuaire — à recaler sur l'IGN si nécessaire",
   "defaultZoom": 14,
   "bbox": [0.0908, 43.4742, 0.2908, 43.6742],
-  "_notes_bbox": "9,33 km² commune + ~2 km de marge environnement immédiat (approximatif)"
+  "_notes_bbox": "9,33 km² commune + ~2 km de marge environnement immédiat (approximatif)",
+  "lidarBbox": [0.1473, 43.5427, 0.2343, 43.6057],
+  "_notes_lidarBbox": "Emprise du traitement LiDAR (T3.1) : centre ±3,5 km ≈ commune + 2 km de marge, 64 dalles MNT. Volontairement plus serrée que bbox (dont la marge réelle est ~11 km) : le disque de la machine de prep limite le volume traité. Élargir ici puis relancer tools/prep si besoin."
 }

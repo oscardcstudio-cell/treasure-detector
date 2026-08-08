@@ -195,3 +195,52 @@ export type HistoricLayerId = typeof HISTORIC_LAYERS[number];
  */
 export const DERIVED_LAYERS = ['cadastre'] as const;
 export type DerivedLayerId = typeof DERIVED_LAYERS[number];
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELIEF LiDAR HD (dérivés T3.1, PMTiles hébergés en GitHub Release)
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface LidarLayerDef {
+  id: string;
+  label: string;
+  /** URL https du fichier .pmtiles (préfixée pmtiles:// par createPMTilesSource) */
+  pmtilesUrl: string;
+  attribution: string;
+}
+
+const LIDAR_RELEASE_BASE =
+  'https://github.com/oscardcstudio-cell/treasure-detector/releases/download/lidar-v1';
+
+/**
+ * Couverture : `lidarBbox` de config/zone.json (commune + 2 km), z11–17.
+ * Régénération : tools/prep (download_mnt.py → derive.py → to_pmtiles.py).
+ */
+export const LIDAR_LAYERS: Record<string, LidarLayerDef> = {
+  'lidar-hillshade': {
+    id: 'lidar-hillshade',
+    label: 'Relief LiDAR (ombrage)',
+    pmtilesUrl: `${LIDAR_RELEASE_BASE}/hillshade.pmtiles`,
+    attribution: '© IGN LiDAR HD',
+  },
+  'lidar-svf': {
+    id: 'lidar-svf',
+    label: 'Relief LiDAR (SVF — creux/buttes)',
+    pmtilesUrl: `${LIDAR_RELEASE_BASE}/svf.pmtiles`,
+    attribution: '© IGN LiDAR HD',
+  },
+  'lidar-lrm': {
+    id: 'lidar-lrm',
+    label: 'Relief LiDAR (micro-reliefs)',
+    pmtilesUrl: `${LIDAR_RELEASE_BASE}/lrm.pmtiles`,
+    attribution: '© IGN LiDAR HD',
+  },
+  'lidar-openness': {
+    id: 'lidar-openness',
+    label: 'Relief LiDAR (openness — crêtes/fossés)',
+    pmtilesUrl: `${LIDAR_RELEASE_BASE}/openness.pmtiles`,
+    attribution: '© IGN LiDAR HD',
+  },
+};
+
+export const LIDAR_LAYER_IDS = Object.keys(LIDAR_LAYERS) as (keyof typeof LIDAR_LAYERS)[];
+export type LidarLayerId = keyof typeof LIDAR_LAYERS;
