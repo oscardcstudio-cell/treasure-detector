@@ -1,35 +1,29 @@
 # État du projet — treasure-detector
 
-> Mis à jour le 2026-08-08. Le plan complet est dans [`docs/PLAN.md`](../docs/PLAN.md) ; ce fichier ne garde que l'avancement.
+> Mis à jour le 2026-08-08 au soir. Plan complet : [`docs/PLAN.md`](../docs/PLAN.md) · Verdict v1 : [`T4.2_VERDICT.md`](T4.2_VERDICT.md).
 
 ## Où on en est
 
-**Phase de plan terminée + spike carto validé. La vraie PWA n'est pas commencée.**
+**v1 construite, déployée et validée en une journée — verdict T4.2 : GO SOUS CONDITIONS.**
 
-### Ce qui existe dans le repo
-- `docs/PLAN.md` — contrat d'exécution complet (~900 lignes)
-- `docs/ONBOARDING.md` — guide de démarrage
-- `prototype/` — spike Leaflet jetable : superposition IGN + GPS + export GPX. **Réutilise 0 ligne** de la future PWA (Leaflet vs MapLibre). Déployé sur un projet Railway séparé `carto-armous` (https://carto-armous-production.up.railway.app)
-- `README.md`, `LICENSE` (MIT), `.gitignore`, `CLAUDE.md`, `llms.txt`, `memory/`
+- **App en ligne** : https://treasure-detector-production.up.railway.app (deploy 6df88078 SUCCESS). Projet Railway `treasure-detector` (667462b8), séparé du spike `carto-armous`.
+- **Tous les lots livrés** sauf l'exécution réelle de T3.1 : phase 0 (scaffold + contrat), phase 1 complète (cartes 11 couches + rideau, GPS/zones ratissées, trouvailles ACE 250, sauvegarde, offline, fenêtre de sortie, sync Supabase), phase 2 complète (HISTOIRE, SOURCES, TOPONYMIE, CIBLES — 28 cibles), phase 3 (scoring 8 critères actifs + moteur H3 + presets + zones signalées), phase 4 (METHODE_TERRAIN relu + T4.2).
+- **230 tests verts, typecheck/lint 0 erreur, CI GitHub verte.**
+- Bloquant attrapé et corrigé par T4.2 : aplatissement `Session.detector` dans la sync (risque 18 du plan, commit 9a79370).
+- Fonctionnalité bonus demandée par Oscar : punchlines sur les cibles (`config/hype.json`, éditable — pastiches originaux style Tony Montana + argot terrain, PAS de répliques du film : repo public, droits).
 
-### Ce qui n'existe PAS encore
-Toute l'application. Aucun lot du plan (T0.1 → T4.2) n'est démarré. Pas de `src/`, pas de `config/`, pas de `supabase/`, pas de `tools/prep/`.
+## Conditions restantes du GO (dans l'ordre)
 
-## Acquis du spike (déjà vérifiés, ne pas re-vérifier)
-Détail dans [`prototype/FINDINGS.md`](../prototype/FINDINGS.md) :
-1. **Identifiants WMTS IGN confirmés** en conditions réelles (lève des `[À VÉRIFIER]` du §4.1 du plan). Cassini = `BNF-IGNF_GEOGRAPHICALGRIDSYSTEMS.CASSINI`, préfixe requis, plafond z14.
-2. **Gotcha réseau** : proxy conteneur bloque IGN → `[MACHINE LOCALE]` ; en local forcer `curl -4`.
-3. **16 cibles géolocalisées** (positions OSM + interprétation toponymique à confirmer sur cadastre). Matière directe pour `docs/zone/CIBLES.md` et `TOPONYMIE.md`.
-4. **Chaîne Railway statique validée**.
+1. **Oscar — téléphone** : installer la PWA depuis l'URL, tester le mode avion après « Télécharger la zone », lisibilité au soleil. Débloque la 1re sortie.
+2. **Oscar — Supabase (~5 min)** : créer le projet sur supabase.com puis suivre [`supabase/README.md`](../supabase/README.md) (login, link, db push, clés dans Railway + secrets GitHub). Puis tester la RLS depuis une session anonyme (commande dans le README).
+3. **T3.1 exécution réelle** : scripts prêts dans `tools/prep/` (rvt-py Apache 2.0 vérifié), MNT LiDAR à télécharger et dérivés SVF/LRM/hillshade à générer (≤2 Go, GDAL via brew). Non exécuté — la preuve de concept est simulée.
+4. **Photos dans l'export** : le round-trip est testé avec `photos: []` — couvrir en v1.1.
+5. **Cadastre 1813** : captures zoom max demandées à Oscar (trio Eglize/Presbitaire/« Devant l'église » avec la cote, Moulin de Floures, tableau d'assemblage) — voir addendum de [`CIBLES.md`](../docs/zone/CIBLES.md).
 
-## Prochaines étapes (ordre du plan §13)
+## Gotchas opérationnels (appris ce jour, dans CLAUDE.md)
 
-1. **T0.1 — Scaffold** (`sonnet`) : Vite + React 19 + TS + MapLibre + Dexie + PWA, `config/zone.json`, CI, déploiement Railway. Acceptation : build vert + `railway deployment list` SUCCESS + carte affichée.
-2. **T0.2 — Contrat de données** (`opus`) : **barrière — aucun lot de phase 1 avant son merge.**
-3. Puis phase 1 (T1.1→T1.7, code, parallèle) et phase 2 (T2.1→T2.4, documents, parallèle).
+Déploiement UNIQUEMENT depuis `git archive HEAD` (jamais le working dir partagé) · Nixpacks abandonné pour Dockerfile (EBUSY) · Express 5 : fallback SPA en middleware, pas de route `'*'` · Gallica : User-Agent navigateur obligatoire · ortho 1950-65 dispo en WMTS (`image/png` seul).
 
-**Chemin le plus court vers une 1re sortie terrain utile** (pas la v1 complète) :
-`T0.1 + T0.2 + T1.1 + T1.3 + T1.4 + T1.5`, avec `CIBLES.md` (T2.4) comme cerveau provisoire. Le scoring auto peut suivre.
+## Après la 1re sortie (calibrage — §13.2 du plan)
 
-## Definition of Done v1
-Voir §13.3 du plan — 10 critères, chacun avec sa preuve. Le critère qui prime : **une sortie de 3 h se log sans que ce soit pénible** (< 5 s pour enregistrer un creusage avec des gants).
+Traces réelles → seuil `ratisse`/`passage_rapide` (0,45 m/s [HYPOTHÈSE]) · largeur d'arc réelle · fourchettes de sensibilité des presets sur `DigPoint` réels.
