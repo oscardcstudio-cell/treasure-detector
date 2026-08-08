@@ -50,6 +50,7 @@
     "@types/maplibre-gl": "^1.13.2",
     "dexie": "^4.4.4",
     "express": "^5.2.1",
+    "h3-js": "^4.5.0",
     "maplibre-gl": "^6.2.0",
     "pmtiles": "^4.4.1"
   }

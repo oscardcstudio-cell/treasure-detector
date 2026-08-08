@@ -17,6 +17,12 @@
 | Détecteur | **Garrett ACE 250** — 6,5 kHz, disque 6,5"×9", échelle 12 segments, sans ground balance. Contraint le contrat de données (§6) et les presets (§9.8) |
 | Pondérations scoring | Déléguées à l'agent, en JSON éditable, révisées après les 1res sorties sur `DigPoint` réels |
 
+## Progression T0.2+ (Phases 3 & 1)
+
+| Agent | Phase | Statut | Livrable | Notes |
+|---|---|---|---|---|
+| **T3.3** | **T3.3** | **✅ DONE** | `src/scoring/**` moteur + tests | Scoring engine : H3 grid, proximity/corridor rules, normalization [0,100], 11/11 tests green, < 50ms real data. API: `scoreZone()`, `generateHeatMap()`, `WhyPanel.tsx`. Prêt pour intégration T3.2. |
+
 ## Ce qui attend Oscar (§13.2) — bloquants
 
 | Moment | Attendu de lui | Bloque |
