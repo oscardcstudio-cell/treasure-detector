@@ -1,0 +1,169 @@
+{
+  "schema_version": "1.0",
+  "date_locked": "2026-08-08",
+  "_status": "[HYPOTHÈSE — synthèse doc ACE 250, à réviser sur DigPoints réels]",
+  "description": "Detector preset profiles derived from scoring engine criteria. Each cell's dominant criterion maps to a preset via criterionToPreset table. Modulated by soilCondition and landUse.",
+  "profiles": [
+    {
+      "id": "coeur_village",
+      "label": "Cœur de village",
+      "mode": "all_metal",
+      "sensitivity": [6, 7],
+      "notch": "aucune",
+      "coil": "sniper_4.5",
+      "sweep": "tres_lent",
+      "digRule": "Creuse tout signal répétable, même faible et râpeux. Clous à la pelle attendus.",
+      "expect": ["billon", "boucles", "appliques", "plombs", "clous"],
+      "why": "Noyau villageois médiéval — deniers/oboles faible conductivité, coil spécialisé requis."
+    },
+    {
+      "id": "villa_champ_ouvert",
+      "label": "Villa gallo-romaine",
+      "mode": "all_metal",
+      "sensitivity": [7, 8],
+      "notch": "aucune",
+      "coil": "stock_6.5x9",
+      "sweep": "normal",
+      "digRule": "Signaux médians répétables. Rechercher la concentration.",
+      "expect": ["bronzes_bas_empire", "fibules", "tegulae"],
+      "why": "Champ ouvert, marqueur de tuile. Cibles grosses et bien conductrices."
+    },
+    {
+      "id": "voie_ancienne",
+      "label": "Voie ancienne",
+      "mode": "all_metal",
+      "sensitivity": [6, 7],
+      "notch": "aucune",
+      "coil": "stock_6.5x9",
+      "sweep": "normal",
+      "digRule": "Creuse tout — pertes aléatoires sur l'axe. Transects le long ET en travers.",
+      "expect": ["monnaies_isolees", "ferrures", "plombs"],
+      "why": "Corridor de circulation antique. Micro-pertes de marchands et pèlerins."
+    },
+    {
+      "id": "moulin_bord_eau",
+      "label": "Moulin / bord de ruisseau",
+      "mode": "all_metal",
+      "sensitivity": [5, 6],
+      "notch": "aucune",
+      "coil": "sniper_4.5",
+      "sweep": "lent",
+      "digRule": "Trier : beaucoup de ferraille de mécanisme. Ignorer fer massif isolé.",
+      "expect": ["fer_massif", "plomb", "monnaies_perdues"],
+      "why": "Site d'eau. Mécanismes de moulin + dépôts de crise à passage."
+    },
+    {
+      "id": "prairie",
+      "label": "Prairie permanente",
+      "mode": "all_metal",
+      "sensitivity": [7, 8],
+      "notch": "aucune",
+      "coil": "stock_6.5x9",
+      "sweep": "tres_lent",
+      "digRule": "À l'écoute du faible. Signaux profonds non remontés par labour.",
+      "expect": ["cibles_profondes", "fibules", "boucles"],
+      "why": "Sol non remuté. Cibles profondes en limite de portée."
+    },
+    {
+      "id": "labour_frais",
+      "label": "Labour frais",
+      "mode": "all_metal",
+      "sensitivity": [7, 7],
+      "notch": "aucune",
+      "coil": "stock_6.5x9",
+      "sweep": "normal",
+      "digRule": "Rendement maximal. Ratisser large.",
+      "expect": ["tout"],
+      "why": "Meilleures conditions de la saison : sol aéré, objets remontés."
+    },
+    {
+      "id": "sol_detrempe",
+      "label": "Sol argileux détrempé",
+      "mode": "all_metal",
+      "sensitivity": [4, 5],
+      "notch": "aucune",
+      "coil": "stock_6.5x9",
+      "sweep": "lent",
+      "digRule": "Ignorer ID instables. Se fier à la répétabilité seule. Régime dégradé.",
+      "expect": ["signaux_fiables_seulement"],
+      "why": "Sans ground balance, gélie/gélif produit faux signaux. Réduire sensibilité est la seule parade."
+    },
+    {
+      "id": "bois",
+      "label": "Bois",
+      "mode": "all_metal",
+      "sensitivity": [6, 7],
+      "notch": "aucune",
+      "coil": "sniper_4.5",
+      "sweep": "lent",
+      "digRule": "Creuse entre les racines. LiDAR excellent ici.",
+      "expect": ["tout"],
+      "why": "LiDAR révèle micro-topographie. Détection physique difficile sous couvert."
+    }
+  ],
+  "criterionToPreset": {
+    "armous_village": "coeur_village",
+    "cau_village": "coeur_village",
+    "tuileries": "villa_champ_ouvert",
+    "midour_source": "moulin_bord_eau",
+    "caussade_via": "voie_ancienne",
+    "microtoponyme_rank1": "coeur_village",
+    "microtoponyme_rank2": "voie_ancienne",
+    "proximity_source": "moulin_bord_eau",
+    "lidar_svf": "villa_champ_ouvert",
+    "lidar_lrm": "coeur_village",
+    "lidar_openness": "coeur_village",
+    "bati_disparu": "coeur_village",
+    "_modulateur_prairie": "prairie",
+    "_modulateur_labour_frais": "labour_frais",
+    "_modulateur_sol_detrempe": "sol_detrempe",
+    "_modulateur_bois": "bois"
+  },
+  "soilConditionModulation": {
+    "labour_frais": {
+      "presetOverride": "labour_frais",
+      "sensitivityAdjustment": 0
+    },
+    "chaume": {
+      "presetOverride": "labour_frais",
+      "sensitivityAdjustment": -1
+    },
+    "prairie": {
+      "presetOverride": "prairie",
+      "sensitivityAdjustment": 0
+    },
+    "sec": {
+      "presetOverride": null,
+      "sensitivityAdjustment": -0.5
+    },
+    "gele": {
+      "presetOverride": "sol_detrempe",
+      "sensitivityAdjustment": 0
+    },
+    "humide": {
+      "presetOverride": "sol_detrempe",
+      "sensitivityAdjustment": 0
+    }
+  },
+  "landUseModulation": {
+    "labour": {
+      "presetOverride": "labour_frais",
+      "sensitivityAdjustment": 0
+    },
+    "prairie": {
+      "presetOverride": "prairie",
+      "sensitivityAdjustment": 0
+    },
+    "bois": {
+      "presetOverride": "bois",
+      "sensitivityAdjustment": 0
+    },
+    "bati": {
+      "flag": "inaccessible"
+    }
+  },
+  "defaults": {
+    "fallbackPresetId": "labour_frais",
+    "fallbackReason": "Aucun critère ne s'applique — conditions de prospection par défaut."
+  }
+}

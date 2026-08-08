@@ -49,15 +49,18 @@ describe('geo/tiles', () => {
     });
 
     it('should clamp tiles to valid grid boundaries', () => {
-      // Extreme bbox covering the world
-      const bbox: [number, number, number, number] = [-180, -85, 180, 85];
-      const tiles = enumerateTiles(bbox, 12, 12);
+      // Bbox volontairement hors bornes — z3 suffit à prouver le clamping
+      // (le monde entier à z12 = 16,7 M de tuiles, 5 min de test pour rien)
+      const bbox: [number, number, number, number] = [-200, -95, 200, 95];
+      const z = 3;
+      const tiles = enumerateTiles(bbox, z, z);
 
+      expect(tiles.length).toBe(Math.pow(2, z) * Math.pow(2, z));
       for (const tile of tiles) {
         expect(tile.x).toBeGreaterThanOrEqual(0);
-        expect(tile.x).toBeLessThan(Math.pow(2, 12));
+        expect(tile.x).toBeLessThan(Math.pow(2, z));
         expect(tile.y).toBeGreaterThanOrEqual(0);
-        expect(tile.y).toBeLessThan(Math.pow(2, 12));
+        expect(tile.y).toBeLessThan(Math.pow(2, z));
       }
     });
   });
@@ -148,25 +151,25 @@ describe('geo/tiles', () => {
     });
 
     it('should handle missing navigator.storage.estimate gracefully', async () => {
-      // Save original
-      const original = navigator.storage.estimate;
-
-      // Mock to throw
-      Object.defineProperty(navigator.storage, 'estimate', {
+      // Remplace navigator.storage entier (defineProperty sur estimate est
+      // non-configurable dans certains environnements de test)
+      const original = navigator.storage;
+      Object.defineProperty(navigator, 'storage', {
         value: undefined,
+        configurable: true,
       });
 
-      const info = await getCacheQuotaInfo();
-
-      // Should return sensible defaults
-      expect(info.quota).toBe(0);
-      expect(info.usage).toBe(0);
-      expect(info.available).toBe(0);
-
-      // Restore
-      Object.defineProperty(navigator.storage, 'estimate', {
-        value: original,
-      });
+      try {
+        const info = await getCacheQuotaInfo();
+        expect(info.quota).toBe(0);
+        expect(info.usage).toBe(0);
+        expect(info.available).toBe(0);
+      } finally {
+        Object.defineProperty(navigator, 'storage', {
+          value: original,
+          configurable: true,
+        });
+      }
     });
   });
 

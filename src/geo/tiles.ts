@@ -13,10 +13,13 @@ import type { TileDownloadOptions, TileEstimate, DownloadProgress, CacheQuotaInf
  * Mercator Web (EPSG:3857) : convertir LonLat WGS84 en tuiles x,y
  */
 function lngLatToTile(lng: number, lat: number, zoom: number): { x: number; y: number } {
+  // Bornes Web Mercator : au-delà de ±85.0511°, tan/log produisent NaN
+  const cLng = Math.max(-180, Math.min(180, lng));
+  const cLat = Math.max(-85.0511, Math.min(85.0511, lat));
   const n = Math.pow(2, zoom);
-  const x = Math.floor(((lng + 180) / 360) * n);
+  const x = Math.floor(((cLng + 180) / 360) * n);
   const y = Math.floor(
-    ((1 - Math.log(Math.tan((lat * Math.PI) / 180) + 1 / Math.cos((lat * Math.PI) / 180)) / Math.PI) / 2) * n
+    ((1 - Math.log(Math.tan((cLat * Math.PI) / 180) + 1 / Math.cos((cLat * Math.PI) / 180)) / Math.PI) / 2) * n
   );
   return { x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)) };
 }
@@ -54,8 +57,11 @@ export function estimateTileDownload(options: TileDownloadOptions): TileEstimate
   const tiles = enumerateTiles(options.bbox, options.minZoom, options.maxZoom);
 
   // Heuristique : moyenne 50 KB par tuile (JPEG ~40KB, PNG ~80KB)
+  // Chaque couche télécharge sa propre pyramide : l'estimation multiplie par le
+  // nombre de couches, comme downloadTiles() le fait réellement.
   const avgSizeKb = 50;
-  const totalTiles = tiles.length;
+  const layerCount = Math.max(1, options.layerIds?.length ?? 1);
+  const totalTiles = tiles.length * layerCount;
   const estimatedSizeMb = (totalTiles * avgSizeKb) / 1024;
 
   return {
