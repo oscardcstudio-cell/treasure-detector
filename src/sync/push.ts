@@ -261,15 +261,24 @@ function convertToRow(entity: any): any {
     findId: 'find_id',
   };
 
+  // Session.detector est imbriqué côté app ({ model, settings }) mais plat côté
+  // Postgres (detector_model / detector_settings). Sans cet aplatissement, l'objet
+  // partirait vers une colonne inexistante et ferait échouer le lot entier
+  // (bloquant relevé par T4.2 — risque 18 du plan).
+  if (entity.detector && typeof entity.detector === 'object') {
+    row.detector_model = entity.detector.model ?? null;
+    row.detector_settings = entity.detector.settings ?? null;
+  }
+
   for (const [camel, snake] of Object.entries(keyMap)) {
     if (camel in entity) {
       row[snake] = entity[camel];
     }
   }
 
-  // Copy remaining fields as-is
+  // Copy remaining fields as-is ('detector' est déjà aplati ci-dessus)
   for (const key in entity) {
-    if (!(key in keyMap) && key !== 'synced_at') {
+    if (!(key in keyMap) && key !== 'synced_at' && key !== 'detector') {
       row[key] = entity[key];
     }
   }

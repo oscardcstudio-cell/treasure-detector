@@ -179,6 +179,48 @@ describe('Sync Push', () => {
     expect(upsertnedRow.synced_at).toBeDefined();
   });
 
+  it('should flatten Session.detector to detector_model/detector_settings columns', async () => {
+    // Bloquant T4.2 : detector est imbriqué côté app, plat côté Postgres —
+    // sans aplatissement l'objet part vers une colonne inexistante.
+    const id = 'session-uuid-1';
+    const payload = {
+      id,
+      startedAt: '2026-08-08T09:00:00Z',
+      parcels: ['32009000AB0042'],
+      soilCondition: 'labour_frais',
+      detector: { model: 'Garrett ACE 250', settings: 'All-Metal, sens 6' },
+      updatedAt: '2026-08-08T10:00:00Z',
+    };
+
+    await enqueueSync('session', id, 'upsert', payload);
+
+    const upsertCalls: any[] = [];
+    mockSupabaseClient.from.mockImplementation(() => ({
+      upsert: vi.fn(async (rows: any[]) => {
+        upsertCalls.push(rows);
+        return { error: null };
+      }),
+      update: vi.fn(async () => ({ error: null })),
+      in: vi.fn(() => ({
+        update: vi.fn(async () => ({ error: null })),
+      })),
+    }));
+
+    await drainSyncQueue();
+
+    expect(upsertCalls.length).toBeGreaterThan(0);
+    const row = upsertCalls[0][0];
+
+    // Aplati vers les colonnes SQL
+    expect(row.detector_model).toBe('Garrett ACE 250');
+    expect(row.detector_settings).toBe('All-Metal, sens 6');
+    // L'objet imbriqué ne doit PAS partir tel quel (colonne inexistante -> échec du lot)
+    expect(row.detector).toBeUndefined();
+    // Les autres champs suivent le mapping normal
+    expect(row.soil_condition).toBe('labour_frais');
+    expect(row.parcels).toEqual(['32009000AB0042']);
+  });
+
   it('should handle soft deletes', async () => {
     const id = 'uuid-1';
 
