@@ -31,9 +31,74 @@ export interface MapViewProps {
  * - Slider de comparaison (rideau) pour avant/après
  * - Persistance de l'état dans localStorage
  */
+/**
+ * Exécute `fn` dès que le style est réellement exploitable.
+ *
+ * `map.getStyle()` renvoie `undefined` tant que le style n'est pas chargé —
+ * c'est exactement la condition que MapLibre teste avant d'accepter
+ * addSource/addLayer. `isStyleLoaded()` ne convient pas : il reste faux tant
+ * qu'une source annexe n'a pas fini de charger, et le premier `styledata`
+ * arrive trop tôt.
+ */
+function whenStyleReady(map: MapLibreMap, fn: () => void) {
+  if (map.getStyle()) {
+    fn();
+    return;
+  }
+  const onStyleData = () => {
+    if (!map.getStyle()) return;
+    map.off('styledata', onStyleData);
+    fn();
+  };
+  map.on('styledata', onStyleData);
+}
+
+/**
+ * Insère (ou remplace) une couche raster en la gardant SOUS toutes les couches
+ * vectorielles déjà posées — heatmap du scoring, trace GPS, trouvailles.
+ * Sans ce `beforeId`, changer de fond de carte recouvrirait tout le reste.
+ */
+function syncRasterLayer(
+  map: MapLibreMap,
+  opts: {
+    layerId: string;
+    sourceId: string;
+    url: string;
+    attribution: string;
+    minZoom: number;
+    opacity?: number;
+  }
+) {
+  const { layerId, sourceId, url, attribution, minZoom, opacity } = opts;
+
+  if (map.getLayer(layerId)) map.removeLayer(layerId);
+  if (map.getSource(sourceId)) map.removeSource(sourceId);
+
+  map.addSource(sourceId, { type: 'raster', tiles: [url], tileSize: 256, attribution });
+
+  const firstNonRaster = map.getStyle().layers.find((l) => l.type !== 'raster')?.id;
+  map.addLayer(
+    {
+      id: layerId,
+      type: 'raster',
+      source: sourceId,
+      minzoom: minZoom,
+      maxzoom: 24,
+      ...(opacity !== undefined ? { paint: { 'raster-opacity': opacity } } : {}),
+    },
+    firstNonRaster
+  );
+}
+
 export default function MapView({ onMapReady, onScoredCellSelected }: MapViewProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
+  /**
+   * La carte est aussi exposée en state : les composants enfants (ScoringLayer…)
+   * doivent re-rendre quand elle devient disponible. Une ref seule ne déclenche
+   * pas de rendu — ils recevaient alors `null`, ou pire une carte périmée.
+   */
+  const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
   const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [topoGeoJSON, setTopoGeoJSON] = useState<any>(null);
 
@@ -70,14 +135,33 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     localStorage.setItem(STORAGE_KEY, JSON.stringify(mapState));
   }, [mapState]);
 
-  // Initialiser la carte
+  /**
+   * Position/zoom d'ouverture, figés au montage.
+   *
+   * INVARIANT : la carte est créée UNE SEULE FOIS (deps `[]`). Faire dépendre
+   * cet effet de `mapState.center/zoom/...` la détruisait et la recréait à
+   * chaque geste — le handler de mouvement réécrit ces valeurs, et `center` est
+   * un nouveau tableau à chaque fois. Tout ce qui est posé impérativement sur la
+   * carte (hexagones du scoring, position GPS, traces, trouvailles) disparaissait
+   * donc au premier déplacement du doigt. Fond de carte et couche historique se
+   * mettent à jour par des effets dédiés, sans recréer la carte.
+   */
+  const initialViewRef = useRef({
+    center: mapState.center,
+    zoom: mapState.zoom,
+    pitch: mapState.pitch,
+    bearing: mapState.bearing,
+    baseLayer: mapState.baseLayer,
+  });
+  const appliedBaseLayerRef = useRef(mapState.baseLayer);
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    const baseLayerDef = LAYERS[mapState.baseLayer as keyof typeof LAYERS];
+    const initial = initialViewRef.current;
+    const baseLayerDef = LAYERS[initial.baseLayer as keyof typeof LAYERS];
     if (!baseLayerDef) return;
 
-    // Construire le style MapLibre
     const style: StyleSpecification = {
       version: 8,
       sources: {
@@ -87,89 +171,112 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
           tileSize: 256,
           attribution: baseLayerDef.attribution,
         },
-        ...(mapState.activeHistoricLayer && {
-          'historic-raster': {
-            type: 'raster',
-            tiles: [LAYERS[mapState.activeHistoricLayer as keyof typeof LAYERS]!.url],
-            tileSize: 256,
-            attribution: LAYERS[mapState.activeHistoricLayer as keyof typeof LAYERS]!.attribution,
-          },
-        }),
       },
-      layers: mapState.activeHistoricLayer
-        ? [
-            {
-              id: 'base-layer',
-              type: 'raster' as const,
-              source: 'base-raster',
-              minzoom: baseLayerDef.minZoom,
-              maxzoom: 24,
-            },
-            {
-              id: 'historic-layer',
-              type: 'raster' as const,
-              source: 'historic-raster',
-              minzoom: LAYERS[mapState.activeHistoricLayer as keyof typeof LAYERS]!.minZoom,
-              maxzoom: 24,
-              paint: {
-                'raster-opacity': mapState.historicOpacity,
-              },
-            },
-          ]
-        : [
-            {
-              id: 'base-layer',
-              type: 'raster' as const,
-              source: 'base-raster',
-              minzoom: baseLayerDef.minZoom,
-              maxzoom: 24,
-            },
-          ],
+      layers: [
+        {
+          id: 'base-layer',
+          type: 'raster' as const,
+          source: 'base-raster',
+          minzoom: baseLayerDef.minZoom,
+          maxzoom: 24,
+        },
+      ],
     };
 
-    map.current = new MapLibreMap({
+    const instance = new MapLibreMap({
       container: mapContainer.current,
       style,
-      center: mapState.center,
-      zoom: mapState.zoom,
-      pitch: mapState.pitch,
-      bearing: mapState.bearing,
+      center: initial.center,
+      zoom: initial.zoom,
+      pitch: initial.pitch,
+      bearing: initial.bearing,
       attributionControl: false,
     });
+    map.current = instance;
 
-    // Ajouter les contrôles
-    map.current.addControl(new NavigationControl(), 'top-right');
+    instance.addControl(new NavigationControl(), 'top-right');
+    setMapInstance(instance);
+    onMapReady?.(instance);
 
-    // Notify parent that map is ready
-    if (onMapReady) {
-      onMapReady(map.current);
-    }
-
-    // Mise à jour de l'état à chaque changement de vue
-    const onMove = () => {
-      if (!map.current) return;
+    // `moveend` et non `move` : persister la vue ne justifie pas un rendu React
+    // à chaque image du déplacement.
+    const onMoveEnd = () => {
       setMapState((prev) => ({
         ...prev,
-        center: map.current!.getCenter().toArray() as [number, number],
-        zoom: map.current!.getZoom(),
-        pitch: map.current!.getPitch(),
-        bearing: map.current!.getBearing(),
+        center: instance.getCenter().toArray() as [number, number],
+        zoom: instance.getZoom(),
+        pitch: instance.getPitch(),
+        bearing: instance.getBearing(),
       }));
     };
-
-    map.current.on('move', onMove);
+    instance.on('moveend', onMoveEnd);
 
     return () => {
-      map.current?.off('move', onMove);
-      map.current?.remove();
+      instance.off('moveend', onMoveEnd);
+      instance.remove();
+      map.current = null;
+      setMapInstance(null);
     };
-  }, [mapState.baseLayer, mapState.activeHistoricLayer, mapState.historicOpacity, mapState.center, mapState.zoom, mapState.pitch, mapState.bearing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Changement de fond de carte — sans recréer la carte
+  useEffect(() => {
+    const instance = mapInstance;
+    const def = LAYERS[mapState.baseLayer as keyof typeof LAYERS];
+    if (!instance || !def) return;
+
+    // Le style initial porte déjà le bon fond : ne rien refaire au montage.
+    if (mapState.baseLayer === appliedBaseLayerRef.current) return;
+    appliedBaseLayerRef.current = mapState.baseLayer;
+
+    whenStyleReady(instance, () =>
+      syncRasterLayer(instance, {
+        layerId: 'base-layer',
+        sourceId: 'base-raster',
+        url: def.url,
+        attribution: def.attribution,
+        minZoom: def.minZoom,
+      })
+    );
+  }, [mapInstance, mapState.baseLayer]);
+
+  // Couche historique en surimpression — ajout/retrait sans recréer la carte
+  useEffect(() => {
+    const instance = mapInstance;
+    if (!instance) return;
+
+    const historicId = mapState.activeHistoricLayer;
+    const apply = () => {
+      if (!historicId) {
+        if (instance.getLayer('historic-layer')) instance.removeLayer('historic-layer');
+        if (instance.getSource('historic-raster')) instance.removeSource('historic-raster');
+        return;
+      }
+      const def = LAYERS[historicId as keyof typeof LAYERS];
+      if (!def) return;
+      syncRasterLayer(instance, {
+        layerId: 'historic-layer',
+        sourceId: 'historic-raster',
+        url: def.url,
+        attribution: def.attribution,
+        minZoom: def.minZoom,
+        opacity: mapState.historicOpacity,
+      });
+    };
+
+    whenStyleReady(instance, apply);
+    // l'opacité a son propre effet : la ré-appliquer ici recréerait la couche
+    // à chaque cran du curseur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapInstance, mapState.activeHistoricLayer]);
 
   // Mettre à jour l'opacité de la couche historique
   useEffect(() => {
-    if (!map.current || !mapState.activeHistoricLayer) return;
-    map.current.setPaintProperty('historic-layer', 'raster-opacity', mapState.historicOpacity);
-  }, [mapState.historicOpacity, mapState.activeHistoricLayer]);
+    if (!mapInstance || !mapState.activeHistoricLayer) return;
+    if (!mapInstance.getLayer('historic-layer')) return;
+    mapInstance.setPaintProperty('historic-layer', 'raster-opacity', mapState.historicOpacity);
+  }, [mapInstance, mapState.historicOpacity, mapState.activeHistoricLayer]);
 
   const handleBaseLayerChange = (layerId: string) => {
     setMapState((prev) => ({ ...prev, baseLayer: layerId }));
@@ -194,9 +301,9 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
       {/* Carte */}
       <div style={{ flex: 1, position: 'relative' }} ref={mapContainer}>
         {/* Scoring layer + heatmap visualization */}
-        {map.current && topoGeoJSON && (
+        {mapInstance && topoGeoJSON && (
           <ScoringLayer
-            map={map.current}
+            map={mapInstance}
             zoneConfig={zoneConfig}
             scoringConfig={scoringConfig as any}
             topoGeoJSON={topoGeoJSON}

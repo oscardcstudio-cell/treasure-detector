@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
+// Doit précéder tout import qui crée une carte : câble le worker MapLibre.
+import './map/maplibreWorker';
 import App from './App';
 import './index.css';
 

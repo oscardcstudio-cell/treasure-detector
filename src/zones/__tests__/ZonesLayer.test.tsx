@@ -17,6 +17,7 @@ describe('ZonesLayer', () => {
   beforeEach(() => {
     // Mock minimal de MapLibre Map
     mockMap = {
+      isStyleLoaded: vi.fn(() => true),
       getSource: vi.fn(() => null),
       addSource: vi.fn(),
       getLayer: vi.fn(() => null),

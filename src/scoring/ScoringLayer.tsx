@@ -24,6 +24,29 @@ interface ScoringLayerProps {
   onCellSelected?: (cell: ScoreCell | undefined) => void;
 }
 
+/**
+ * MapLibre refuse addSource/addLayer tant que son style n'est pas prêt
+ * (« Style is not done loading ») : un clic sur « Score Zone » juste après
+ * l'ouverture de la carte tombait sur cette erreur.
+ *
+ * On réessaie au lieu de patienter à l'aveugle : `map.isStyleLoaded()` est plus
+ * strict que la condition réelle (il reste false tant qu'une source annexe n'a
+ * pas fini de charger), donc l'attendre bloquerait pour rien.
+ */
+async function withStyleReady<T>(fn: () => T, timeoutMs = 10000): Promise<T> {
+  const start = Date.now();
+  for (;;) {
+    try {
+      return fn();
+    } catch (err) {
+      const isStyleNotReady =
+        err instanceof Error && /style is not done loading/i.test(err.message);
+      if (!isStyleNotReady || Date.now() - start > timeoutMs) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
+}
+
 export const ScoringLayer: React.FC<ScoringLayerProps> = ({
   map,
   zoneConfig,
@@ -56,14 +79,16 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
       const heatmapGeoJSON = generateHeatMap(cells);
 
       // Add or update source
-      if (!map.getSource('heatmap-source')) {
-        map.addSource('heatmap-source', {
-          type: 'geojson',
-          data: heatmapGeoJSON,
-        });
-      } else {
-        (map.getSource('heatmap-source') as GeoJSONSource).setData(heatmapGeoJSON);
-      }
+      await withStyleReady(() => {
+        if (!map.getSource('heatmap-source')) {
+          map.addSource('heatmap-source', {
+            type: 'geojson',
+            data: heatmapGeoJSON,
+          });
+        } else {
+          (map.getSource('heatmap-source') as GeoJSONSource).setData(heatmapGeoJSON);
+        }
+      });
 
       // Add fill layer if not present
       if (!map.getLayer('heatmap-fill')) {

@@ -51,17 +51,22 @@ describe('zones/source', () => {
       expect(result.features).toHaveLength(0);
     });
 
-    it('devrait lancer une exception en cas erreur HTTP autre que 404', async () => {
+    // Couche INFORMATIVE et optionnelle (commit da2ee4e) : toute erreur —
+    // HTTP, structure, parsing — dégrade en couche vide au lieu de rejeter,
+    // sinon le montage de la carte plantait en boucle en production.
+    it('devrait dégrader en couche vide en cas erreur HTTP autre que 404', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       });
 
-      await expect(loadSignaledZones()).rejects.toThrow('HTTP 500');
+      const result = await loadSignaledZones();
+      expect(result.type).toBe('FeatureCollection');
+      expect(result.features).toHaveLength(0);
     });
 
-    it('devrait valider la structure GeoJSON', async () => {
+    it('devrait dégrader en couche vide si la structure GeoJSON est invalide', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -71,10 +76,11 @@ describe('zones/source', () => {
         }),
       });
 
-      await expect(loadSignaledZones()).rejects.toThrow('Structure GeoJSON invalide');
+      const result = await loadSignaledZones();
+      expect(result.features).toHaveLength(0);
     });
 
-    it('devrait lancer une exception en cas JSON invalide', async () => {
+    it('devrait dégrader en couche vide en cas JSON invalide', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -83,7 +89,8 @@ describe('zones/source', () => {
         },
       });
 
-      await expect(loadSignaledZones()).rejects.toThrow();
+      const result = await loadSignaledZones();
+      expect(result.features).toHaveLength(0);
     });
   });
 

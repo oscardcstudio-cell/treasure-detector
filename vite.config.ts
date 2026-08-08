@@ -64,6 +64,15 @@ export default defineConfig({
     }),
   ],
 
+  /**
+   * MapLibre GL v6 instancie son worker en `{ type: 'module' }` : le worker
+   * émis par Vite (voir src/map/maplibreWorker.ts) doit donc être un ES module.
+   * En 'iife' (défaut) le worker se charge mais échoue au premier import.
+   */
+  worker: {
+    format: 'es',
+  },
+
   build: {
     outDir: 'dist',
     sourcemap: false,
