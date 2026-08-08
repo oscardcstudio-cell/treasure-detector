@@ -95,13 +95,8 @@ describe('Map state persistence', () => {
   it('should handle corrupted storage gracefully', () => {
     localStorage.setItem(STORAGE_KEY, 'invalid json {');
 
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : null;
-      expect(parsed).toThrow;
-    } catch {
-      // Comportement attendu : JSON.parse lève une erreur
-      expect(true).toBe(true);
-    }
+    const saved = localStorage.getItem(STORAGE_KEY);
+    expect(saved).not.toBeNull();
+    expect(() => JSON.parse(saved as string)).toThrow();
   });
 });

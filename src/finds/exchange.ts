@@ -114,11 +114,14 @@ export function importFindsFromGeoJSON(
 
   for (const feature of geojson.features) {
     if (feature.properties?.source === 'find') {
-      const { source, digPointSignal, digPointOutcome, accuracyM, swathWidthM, coverage, ...findData } =
-        feature.properties;
+      const findData = { ...feature.properties };
+      for (const k of ['source', 'digPointSignal', 'digPointOutcome', 'accuracyM', 'swathWidthM', 'coverage']) {
+        delete findData[k];
+      }
       finds.push(findData as Partial<Find>);
     } else if (feature.properties?.source === 'surface_observation') {
-      const { source, ...obsData } = feature.properties;
+      const obsData = { ...feature.properties };
+      delete obsData['source'];
       observations.push(obsData as Partial<SurfaceObservation>);
     }
   }

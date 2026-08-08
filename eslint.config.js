@@ -28,6 +28,8 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       ...tsPlugin.configs.recommended.rules,
+      // tsc verifie deja les identifiants ; no-undef ignore les types DOM/TS (PositionOptions, GeoJSON…)
+      'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
