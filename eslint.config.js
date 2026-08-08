@@ -17,6 +17,7 @@ export default [
       },
       globals: {
         ...globals.browser,
+        GeoJSON: 'readonly',
         React: 'readonly',
         JSX: 'readonly',
       },
