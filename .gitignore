@@ -1,0 +1,44 @@
+# Données de terrain — coordonnées de trouvailles, traces GPS, photos.
+# Le code et la méthode sont publics ; les cibles ne le sont pas.
+data/private/
+
+# Artefacts lourds générés par tools/prep/ — distribués en GitHub Releases,
+# jamais versionnés (un repo public qui grossit à chaque régénération devient
+# impossible à cloner).
+data/derived/
+*.pmtiles
+*.laz
+*.copc.laz
+*.tif
+*.tiff
+
+# Secrets. La clé anon Supabase est publique par conception et vit dans les
+# variables d'environnement ; la clé service_role ne doit JAMAIS entrer ici.
+.env
+.env.*
+!.env.example
+
+# Deps / build
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Tests
+coverage/
+playwright-report/
+test-results/
+
+# Python (tools/prep)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
