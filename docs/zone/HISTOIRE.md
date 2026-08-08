@@ -97,7 +97,7 @@ Marciac, **distante de ~8 km d'Armous-et-Cau**, illustre le modèle économique 
 
 ### 5.1 Contexte militaire et monétaire
 
-**[FAIT]** La Gascogne connaît des **passages de routiers, raids anglais et français, dépôts de crise de monnaies d'argent et d'or** ([plan §2.3](https://TODO)). Les **châteaux et bastides** (Bassoues, Beaumarchés 1288, **Marciac 1298**) se fortifient.
+**[FAIT]** La Gascogne connaît des **passages de routiers, raids anglais et français, dépôts de crise de monnaies d'argent et d'or** ([plan §2.3](../PLAN.md)). Les **châteaux et bastides** (Bassoues, Beaumarchés 1288, **Marciac 1298**) se fortifient.
 
 **Implications prospection** : enfouissements de petit numéraire (billon, jetons de compte), monnaies d'argent égarées, militaria anglo-gascon.
 
@@ -125,7 +125,7 @@ Marciac, **distante de ~8 km d'Armous-et-Cau**, illustre le modèle économique 
 
 ### 7.2 Fusion administrative
 
-**[FAIT]** Armous et Cau, initialement deux **communes ou deux sections**, fusionnent entre **1790 et 1794** pour former **Armous-et-Cau** ([plan §2.2](https://TODO)).
+**[FAIT]** Armous et Cau, initialement deux **communes ou deux sections**, fusionnent entre **1790 et 1794** pour former **Armous-et-Cau** ([plan §2.2](../PLAN.md)).
 
 **Cadastre napoléonien** : la fusion s'observe clairement. AD32 détient **9 planches** du cadastre d'Armous-et-Cau (cote **3P**, géomètre Daubas), consultables en visionneuse ([archives32.fr](https://www.archives32.fr/)) :
 - `3P_..._1` : tableau d'assemblage, 1/10000, 1813
@@ -148,7 +148,7 @@ Marciac, **distante de ~8 km d'Armous-et-Cau**, illustre le modèle économique 
 
 ### 8.2 Dépeuplement et fermes abandonnées
 
-**[FAIT]** La commune connaît un **dépeuplement continu** : 95 habitants en 2024. Les fermes et métairies disparaissent progressivement, identifiables par **différentiel entre Cassini (1750-ish), état-major (1820-ish), orthos 1950-65, et ortho actuelle** ([plan §2.3](https://TODO)).
+**[FAIT]** La commune connaît un **dépeuplement continu** : 95 habitants en 2024. Les fermes et métairies disparaissent progressivement, identifiables par **différentiel entre Cassini (1750-ish), état-major (1820-ish), orthos 1950-65, et ortho actuelle** ([plan §2.3](../PLAN.md)).
 
 Les microtoponymes du cadastre contiennent des **`borde`, `bordeneuve`, `casau`** (métairies) et **`cementeri`** (cimetières) — à inventorier systématiquement.
 
