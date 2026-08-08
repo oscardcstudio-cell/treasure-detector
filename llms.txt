@@ -1,0 +1,41 @@
+# treasure-detector
+> Web app (PWA) de prospection au détecteur de métaux — zone pilote Armous-et-Cau (Gers, 32). Croise cartes anciennes IGN + GPS terrain + scoring heuristique explicable.
+
+## Vue d'ensemble
+- [CLAUDE.md](CLAUDE.md) : Instructions pour Claude Code — règles, invariants, état, flux IGN confirmés, git
+- [docs/PLAN.md](docs/PLAN.md) : **Le contrat d'exécution** (~900 lignes) — architecture, contrat de données, scoring, 20 lots. Source de vérité
+- [docs/ONBOARDING.md](docs/ONBOARDING.md) : Mise au travail en 10 min, les 2 vérifs qui débloquent le projet
+- [README.md](README.md) : Vision du projet en 3 points, stack, licence
+
+## Sections clés de PLAN.md (naviguer par §)
+- §0 : Conventions [FAIT]/[À VÉRIFIER]/[HYPOTHÈSE] — contraignantes pour tout agent
+- §1 : Décisions d'Oscar non rediscutables (nom, zone, détecteur ACE 250, stack)
+- §2 : Le savoir spécialiste sur la zone (histoire, toponymie gasconne, cibles)
+- §5 : Architecture — local-first, Supabase, pièges identifiés (persistance iOS, RLS, projections)
+- §6 : Contrat de données (types TS, invariants) — tout le code s'écrit contre lui
+- §7 : Moteur de scoring (critères, pondérations, grille H3)
+- §8 : Découpage en 20 lots pour agents, avec critères d'acceptation
+- §9 : Méthode de terrain + réglages Garrett ACE 250 par type de site
+- §10 : Risques et inconnues à lever
+- §13 : Ordre d'exécution, graphe de dépendances, Definition of Done v1
+
+## Mémoire projet (état, décisions, blocages)
+- [memory/MEMORY.md](memory/MEMORY.md) : Index de la mémoire projet
+- [memory/ETAT.md](memory/ETAT.md) : Avancement, ce qui existe, prochaines étapes
+- [memory/DECISIONS.md](memory/DECISIONS.md) : Décisions figées + ce qui attend Oscar
+
+## Spike carto (référence jetable, PAS la future app)
+- [prototype/README.md](prototype/README.md) : Ce que le spike valide et ce qu'il n'est pas
+- [prototype/FINDINGS.md](prototype/FINDINGS.md) : Identifiants WMTS IGN confirmés, gotcha réseau IPv4, 16 cibles géolocalisées
+- [prototype/index.html](prototype/index.html) : Carte Leaflet mono-fichier (WMTS IGN + GPS + GPX)
+
+## Points non-évidents (gotchas)
+- La zone est un PARAMÈTRE (config/zone.json), jamais en dur
+- Cassini : préfixe `BNF-IGNF_` obligatoire, plafonne à z14
+- En conteneur : proxy bloque `data.geopf.fr` → tâches `[MACHINE LOCALE]`. En local Mac : forcer `curl -4` (IPv6 échoue)
+- Clé Supabase `anon` publique = normal SI la RLS est active ; `service_role` ne sort JAMAIS du dépôt
+- Ne jamais copier `lidar2map` (GPL-3) — réimplémenter depuis les publications
+- Artefacts lourds (pmtiles/laz/tif) en GitHub Releases, jamais dans git
+- `data/private/` gitignoré (coordonnées de trouvailles) — repo public, cibles privées
+- Reprojection uniquement dans tools/prep/ — décalage EPSG = erreur la plus discrète du projet
+- prototype/ ne partage aucune ligne avec la future PWA (Leaflet vs MapLibre) — référence, pas base
