@@ -1,0 +1,11 @@
+numpy==1.24.3
+rasterio==1.3.8
+GDAL==3.7.2
+shapely==2.0.1
+requests==2.31.0
+rvt-py==2.3.0
+rio-cogeo==5.0.1
+rio-mbtiles==1.1.0
+pmtiles==3.16.1
+pyproj==3.6.0
+tqdm==4.66.1

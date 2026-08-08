@@ -1,0 +1,21 @@
+# data/ — ne rien committer d'ici sauf .geojson
+# (les PMTiles, GeoTIFF et autres artefacts lourds vont en GitHub Releases)
+
+# Raster (lourds)
+*.pmtiles
+*.tif
+*.tiff
+*.vrt
+*.laz
+*.las
+*.zip
+
+# Sources
+sources/
+
+# Private (coordonnées trouvailles)
+private/
+
+# Sauf GeoJSON (vecteurs, acceptables en git)
+!*.geojson
+!**/*.geojson

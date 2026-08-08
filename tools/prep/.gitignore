@@ -1,0 +1,14 @@
+# tools/prep venv + artefacts
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Données intermédiaires (lourdes, générées)
+mnt_lidar*.vrt
+mnt_lidar*.tif
+*.laz
+*.tif
+
+# Logs
+logs/
