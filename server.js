@@ -35,6 +35,16 @@ app.use(express.static(DIST_DIR, {
 // SPA fallback: any request that doesn't match a file serves index.html
 // (middleware sans motif : Express 5 / path-to-regexp 8 rejette la route '*')
 app.use((req, res) => {
+  // Le fallback ne vaut QUE pour les navigations de page. Sinon un fichier absent
+  // (.geojson, .mjs, .json) recevait index.html en 200 : JSON.parse plantait et les
+  // imports de module échouaient sur un MIME text/html, au lieu d'un 404 franc.
+  const looksLikeFile = path.extname(req.path) !== '';
+  const wantsHtml = (req.headers.accept || '').includes('text/html');
+  if (looksLikeFile || !wantsHtml) {
+    res.status(404).type('text/plain').send('Not found');
+    return;
+  }
+
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');

@@ -33,9 +33,11 @@ export async function loadSignaledZones(): Promise<SignaledZonesGeoJSON> {
 
     return data as SignaledZonesGeoJSON;
   } catch (error) {
+    // Couche INFORMATIVE et optionnelle : son absence ne doit jamais casser l'app.
+    // Relancer l'erreur faisait planter le montage de la carte en boucle.
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
-    console.error(`Erreur lors du chargement des zones signalées: ${message}`);
-    throw error;
+    console.warn(`Zones signalées indisponibles (${message}) — couche vide.`);
+    return { type: 'FeatureCollection', features: [] };
   }
 }
 

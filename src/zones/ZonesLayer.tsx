@@ -111,7 +111,13 @@ export const ZonesLayer: React.FC<ZonesLayerProps> = ({
       map.getCanvas().style.cursor = '';
     };
 
-    initializeLayer();
+    // addSource/addLayer avant la fin du chargement du style lève
+    // « Style is not done loading » et casse le montage de la carte.
+    if (map.isStyleLoaded()) {
+      initializeLayer();
+    } else {
+      map.once('load', initializeLayer);
+    }
 
     return () => {
       if (popupRef.current) {
