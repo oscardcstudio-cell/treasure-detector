@@ -25,26 +25,40 @@ interface ScoringLayerProps {
 }
 
 /**
- * MapLibre refuse addSource/addLayer tant que son style n'est pas prêt
- * (« Style is not done loading ») : un clic sur « Score Zone » juste après
- * l'ouverture de la carte tombait sur cette erreur.
+ * MapLibre refuse TOUTE mutation du style (addSource, addLayer, …) tant qu'il
+ * n'est pas prêt (« Style is not done loading ») : un clic sur « Score Zone »
+ * juste après l'ouverture de la carte tombait sur cette erreur.
  *
- * On réessaie au lieu de patienter à l'aveugle : `map.isStyleLoaded()` est plus
- * strict que la condition réelle (il reste false tant qu'une source annexe n'a
- * pas fini de charger), donc l'attendre bloquerait pour rien.
+ * INVARIANT (vérifié dans le code MapLibre v6) : `map.getStyle()` renvoie
+ * `undefined` tant que `style._loaded` est false — la même condition exacte que
+ * teste `_checkLoaded()` avant addSource/addLayer. Attendre `getStyle()` truthy
+ * garantit donc que les mutations passeront. `isStyleLoaded()` ne convient pas
+ * (reste false tant qu'une source annexe charge) et le premier `styledata` peut
+ * arriver trop tôt, d'où le re-test dans le handler.
+ *
+ * Leçon du bug du premier clic : protéger un seul appel ne suffit pas — TOUTES
+ * les mutations doivent se faire dans `fn`, exécuté d'un seul bloc synchrone
+ * une fois le style prêt (aucun await entre les mutations).
  */
-async function withStyleReady<T>(fn: () => T, timeoutMs = 10000): Promise<T> {
-  const start = Date.now();
-  for (;;) {
-    try {
-      return fn();
-    } catch (err) {
-      const isStyleNotReady =
-        err instanceof Error && /style is not done loading/i.test(err.message);
-      if (!isStyleNotReady || Date.now() - start > timeoutMs) throw err;
-      await new Promise((resolve) => setTimeout(resolve, 150));
-    }
+async function withStyleReady<T>(map: MapLibreMap, fn: () => T, timeoutMs = 15000): Promise<T> {
+  if (!map.getStyle()) {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        map.off('styledata', onStyleData);
+        reject(new Error('La carte ne s’est pas initialisée — recharger la page'));
+      }, timeoutMs);
+      const onStyleData = () => {
+        if (!map.getStyle()) return;
+        map.off('styledata', onStyleData);
+        clearTimeout(timer);
+        resolve();
+      };
+      map.on('styledata', onStyleData);
+      // Si le style est devenu prêt entre le test initial et l'abonnement
+      if (map.getStyle()) onStyleData();
+    });
   }
+  return fn();
 }
 
 export const ScoringLayer: React.FC<ScoringLayerProps> = ({
@@ -60,6 +74,9 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
   const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [isLayerVisible, setIsLayerVisible] = useState(true);
   const scoredCellsRef = useRef<ScoreCell[]>([]);
+  // Les handlers carte ne doivent être posés qu'une fois, même si le scoring
+  // est relancé (withStyleReady peut ré-exécuter le bloc de mutations).
+  const handlersAttachedRef = useRef(false);
 
   const handleScore = useCallback(async () => {
     if (!map) {
@@ -78,8 +95,8 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
       // Generate heatmap GeoJSON
       const heatmapGeoJSON = generateHeatMap(cells);
 
-      // Add or update source
-      await withStyleReady(() => {
+      // Source + couches + handlers : un seul bloc, exécuté quand le style est prêt
+      await withStyleReady(map, () => {
         if (!map.getSource('heatmap-source')) {
           map.addSource('heatmap-source', {
             type: 'geojson',
@@ -88,53 +105,53 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
         } else {
           (map.getSource('heatmap-source') as GeoJSONSource).setData(heatmapGeoJSON);
         }
-      });
 
-      // Add fill layer if not present
-      if (!map.getLayer('heatmap-fill')) {
-        const paintSpec = getHeatMapPaintSpec();
-        map.addLayer({
-          id: 'heatmap-fill',
-          type: 'fill',
-          source: 'heatmap-source',
-          paint: {
-            ...paintSpec,
-            'fill-opacity': 0.35,
-          },
-        });
+        if (!map.getLayer('heatmap-fill')) {
+          const paintSpec = getHeatMapPaintSpec();
+          map.addLayer({
+            id: 'heatmap-fill',
+            type: 'fill',
+            source: 'heatmap-source',
+            paint: {
+              ...paintSpec,
+              'fill-opacity': 0.35,
+            },
+          });
 
-        // Add outline layer
-        map.addLayer({
-          id: 'heatmap-outline',
-          type: 'line',
-          source: 'heatmap-source',
-          paint: {
-            'line-color': '#333',
-            'line-width': 1,
-            'line-opacity': 0.2,
-          },
-        });
+          map.addLayer({
+            id: 'heatmap-outline',
+            type: 'line',
+            source: 'heatmap-source',
+            paint: {
+              'line-color': '#333',
+              'line-width': 1,
+              'line-opacity': 0.2,
+            },
+          });
+        }
 
-        // Click handler for cells
-        map.on('click', 'heatmap-fill', (e) => {
-          if (e.features && e.features[0]) {
-            const h3 = e.features[0].properties?.h3;
-            if (h3) {
-              const cell = scoredCellsRef.current.find((c) => c.h3 === h3);
-              setSelectedCell(cell);
-              onCellSelected?.(cell);
+        if (!handlersAttachedRef.current) {
+          handlersAttachedRef.current = true;
+
+          map.on('click', 'heatmap-fill', (e) => {
+            if (e.features && e.features[0]) {
+              const h3 = e.features[0].properties?.h3;
+              if (h3) {
+                const cell = scoredCellsRef.current.find((c) => c.h3 === h3);
+                setSelectedCell(cell);
+                onCellSelected?.(cell);
+              }
             }
-          }
-        });
+          });
 
-        // Cursor feedback
-        map.on('mouseenter', 'heatmap-fill', () => {
-          map.getCanvas().style.cursor = 'pointer';
-        });
-        map.on('mouseleave', 'heatmap-fill', () => {
-          map.getCanvas().style.cursor = '';
-        });
-      }
+          map.on('mouseenter', 'heatmap-fill', () => {
+            map.getCanvas().style.cursor = 'pointer';
+          });
+          map.on('mouseleave', 'heatmap-fill', () => {
+            map.getCanvas().style.cursor = '';
+          });
+        }
+      });
 
       setIsScored(true);
       setIsLoading(false);
