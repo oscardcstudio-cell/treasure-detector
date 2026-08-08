@@ -1,0 +1,29 @@
+{
+  "_description": "Pondérations du moteur de scoring — éditables, dérivés du plan §7",
+  "criteria": {
+    "ancien_village_noyau": {
+      "weight": 1.0,
+      "label": "Noyau de village ancien (Armous/Cau)"
+    },
+    "source_riviere": {
+      "weight": 0.8,
+      "label": "Source de rivière (Midour, Hountan)"
+    },
+    "via_tolosana_proximity": {
+      "weight": 0.7,
+      "label": "Proximité Via Tolosana (GR 653)"
+    },
+    "villa_romaine_marker": {
+      "weight": 0.8,
+      "label": "Marqueur villa romaine (tuile, céramique)"
+    },
+    "abbaye_dependency": {
+      "weight": 0.6,
+      "label": "Dépendance La Case-Dieu (hypothèse)"
+    },
+    "labour_accessibility": {
+      "weight": 0.5,
+      "label": "Labour accessible (RPG)"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Armous-et-Cau",
+  "insee": "32009",
+  "center": [0.1908, 43.5742],
+  "_notes_center": "[À VÉRIFIER] source annuaire — à recaler sur l'IGN si nécessaire",
+  "defaultZoom": 14,
+  "bbox": [0.0908, 43.4742, 0.2908, 43.6742],
+  "_notes_bbox": "9,33 km² commune + ~2 km de marge environnement immédiat (approximatif)"
+}

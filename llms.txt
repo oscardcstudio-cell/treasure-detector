@@ -7,6 +7,57 @@
 - [docs/ONBOARDING.md](docs/ONBOARDING.md) : Mise au travail en 10 min, les 2 vérifs qui débloquent le projet
 - [README.md](README.md) : Vision du projet en 3 points, stack, licence
 
+## Arborescence PWA (T0.1 complété)
+
+```
+treasure-detector/
+├── index.html                        # HTML entry point
+├── vite.config.ts                    # Vite + React + PWA plugin
+├── tsconfig.json                     # TypeScript strict
+├── package.json                      # npm scripts: dev, build, typecheck, lint
+├── railway.json                      # Nixpacks build + Node server.js
+├── server.js                         # Express server (Range support, cache headers)
+├── eslint.config.js                  # ESLint FlatConfig for v9
+│
+├── .github/workflows/ci.yml          # CI: typecheck, lint, build, gitleaks
+├── .env.example                      # Config template (Supabase optional for v0.1)
+│
+├── public/
+│   └── icon.svg                      # PWA icon (192x192 placeholder)
+│
+├── src/
+│   ├── main.tsx                      # React entry, PWA register
+│   ├── App.tsx                       # MapLibre GL minimal map, IGN tiles
+│   ├── index.css                     # Base styles (MapLibre override)
+│   └── lib/
+│       └── supabase.ts               # Client init (tolerates missing env vars)
+│
+├── config/
+│   ├── zone.json                     # Zone param: Armous-et-Cau center/bbox/zoom
+│   └── scoring.json                  # Scoring weights (editable, T3.2+)
+│
+├── docs/
+│   ├── PLAN.md                       # Contrat d'exécution (source de vérité)
+│   ├── ONBOARDING.md
+│   ├── CONTRACTS.md                  # (T0.2 — data types)
+│   ├── SCORING.md                    # (T3.2 — criteria + evidence)
+│   └── zone/
+│       ├── HISTOIRE.md               # (T2.1 — dépouillement)
+│       ├── SOURCES.md                # (T2.2 — archives et flux)
+│       ├── TOPONYMIE.md              # (T2.3 — microtoponymes gasconne)
+│       └── CIBLES.md                 # (T2.4 — locs Armous/Cau)
+│
+├── tools/prep/                       # (T3.1 — pipeline Python, hors app)
+├── data/
+│   ├── private/                      # [GITIGNORED] trouvailles, traces, photos
+│   └── derived/                      # [GITIGNORED] PMTiles, GeoJSON générés
+│
+└── memory/
+    ├── MEMORY.md
+    ├── ETAT.md
+    └── DECISIONS.md
+```
+
 ## Sections clés de PLAN.md (naviguer par §)
 - §0 : Conventions [FAIT]/[À VÉRIFIER]/[HYPOTHÈSE] — contraignantes pour tout agent
 - §1 : Décisions d'Oscar non rediscutables (nom, zone, détecteur ACE 250, stack)

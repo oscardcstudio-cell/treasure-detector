@@ -1,0 +1,51 @@
+{
+  "name": "treasure-detector",
+  "version": "1.0.0",
+  "description": "Web app de prospection au détecteur de métaux. Zone pilote : **Armous-et-Cau (Gers, 32)**.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "prospection",
+    "détecteur",
+    "métaux",
+    "PWA"
+  ],
+  "author": "oscardcstudio",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.9.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-build": "^7.4.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
+    "@turf/turf": "^7.4.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/maplibre-gl": "^1.13.2",
+    "dexie": "^4.4.4",
+    "express": "^5.2.1",
+    "maplibre-gl": "^6.2.0",
+    "pmtiles": "^4.4.1"
+  }
+}

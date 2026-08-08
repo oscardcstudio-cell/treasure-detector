@@ -6,9 +6,11 @@ On superpose les cartes anciennes (Cassini, état-major 1820-1866, orthophotos i
 
 ## État
 
-**Phase de plan.** Rien n'est encore implémenté. Tout est dans **[`docs/PLAN.md`](docs/PLAN.md)** : contexte historique de la zone, sources de données, architecture, contrat de données, moteur de scoring, et le découpage en 20 lots exécutables.
+**T0.1 scaffold complété** (2026-08-08). PWA React 19 + TypeScript strict + Vite 6 + MapLibre GL scaffold avec carte IGN minimale, client Supabase tolérant l'absence de config, PWA setup, serveur statique Railway, CI GitHub Actions. Build/typecheck/lint passent.
 
-Nouveau sur le projet ? → **[`docs/ONBOARDING.md`](docs/ONBOARDING.md)**
+Prochaine étape : **T0.2 contrat de données** (bloquant pour tout le code).
+
+Nouveau sur le projet ? → **[`docs/ONBOARDING.md`](docs/ONBOARDING.md)** · Architecture complète → **[`docs/PLAN.md`](docs/PLAN.md)**
 
 ## L'idée en trois points
 
@@ -26,6 +28,40 @@ Toutes les couches viennent de l'open data IGN (licence Etalab 2.0, attribution 
 
 Les traces, creusages et trouvailles vivent dans `data/private/`, **gitignoré**. Le code et la méthode sont publics ; les coordonnées ne le sont pas.
 
+## Démarrage local
+
+```bash
+npm install
+npm run dev                  # http://localhost:3000 (Vite hot reload)
+npm run typecheck           # TypeScript strict
+npm run lint                # ESLint
+npm run build               # Production dist/
+```
+
+## Déploiement Railway
+
+PWA static hosted on Railway. Buildpack Nixpacks, start command: `node server.js`. Server supports Range requests for PMTiles offline archives.
+
+```bash
+# Variables d'environnement (optionnelles pour v0.1, obligatoires pour T1.7)
+railway variables --set VITE_SUPABASE_URL="..." --set VITE_SUPABASE_ANON_KEY="..."
+
+# Deploy
+railway up
+railway deployment list              # ← OBLIGATOIRE : attendre SUCCESS
+railway domain                       # URL publique
+
+# PWA install sur téléphone
+# 1. Ouvrir l'URL Railway sur mobile
+# 2. Menu → Installer (ou "Add to Home Screen")
+```
+
+## Configuration
+
+- **Zone** → `config/zone.json` : centre (lon/lat), zoom, bbox. Armous-et-Cau est la zone pilote, pas une hardcoded assumption.
+- **Scoring** → `config/scoring.json` : pondérations des critères, éditables sans redeploy.
+- **Secrets** → `.env.local` : `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (jamais commitées, `.env.example` lisible seul).
+
 ## Licence
 
-MIT pour le code. Les données IGN restent sous leur licence propre.
+MIT pour le code. Les données IGN restent sous leur licence propre (Etalab 2.0, attribution « IGN » obligatoire sur chaque tuile).
