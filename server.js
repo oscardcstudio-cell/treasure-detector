@@ -33,7 +33,8 @@ app.use(express.static(DIST_DIR, {
 }));
 
 // SPA fallback: any request that doesn't match a file serves index.html
-app.get('*', (req, res) => {
+// (middleware sans motif : Express 5 / path-to-regexp 8 rejette la route '*')
+app.use((req, res) => {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
