@@ -1,102 +1,82 @@
-import { useState } from 'react';
-import MapView from './map/MapView';
-import Curtain from './map/Curtain';
-import { HistoricLayerId } from './map/layers';
-
-type ViewMode = 'standard' | 'curtain';
+import { useEffect, useState } from 'react';
+import { setupLossDetection, setupAutoExport } from './backup';
+import { getDatabase } from './db/schema';
+import AppShell from './app/AppShell';
 
 /**
  * App — Point d'entrée principal
- * Bascule entre deux modes de visualisation :
- * 1. MapView — Carte standard avec sélection de fond et superposition
- * 2. Curtain — Rideau de comparaison entre deux couches historiques
+ * 1. Initialise loss detection (pour restauration si crash)
+ * 2. Setup auto-export (sauvegarde auto en fin de session)
+ * 3. Branche l'orchestration complète (GPS + carte + finds)
  */
 export default function App() {
-  const [viewMode, setViewMode] = useState<ViewMode>('standard');
-  const [curtainLeft, setCurtainLeft] = useState<HistoricLayerId>('etat-major');
-  const [curtainRight, setCurtainRight] = useState<HistoricLayerId>('cassini');
+  const [appReady, setAppReady] = useState(false);
+  const [lossDetected, setLossDetected] = useState(false);
 
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Toggle view mode */}
+  useEffect(() => {
+    (async () => {
+      try {
+        const db = getDatabase();
+
+        // Setup loss detection callback
+        await setupLossDetection(db, (metadata) => {
+          console.warn('Data loss detected! Last backup:', metadata);
+          setLossDetected(true);
+          // TODO: Show UI prompt to restore
+        });
+
+        // Setup auto-export on visibility change and beforeunload
+        setupAutoExport(db);
+
+        setAppReady(true);
+      } catch (e) {
+        console.error('Failed to initialize app:', e);
+      }
+    })();
+  }, []);
+
+  if (!appReady) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Initialisation en cours...</p>
+      </div>
+    );
+  }
+
+  if (lossDetected) {
+    return (
       <div
         style={{
-          padding: '8px 12px',
-          background: '#f5f5f5',
-          borderBottom: '1px solid #ddd',
+          width: '100%',
+          height: '100%',
           display: 'flex',
-          gap: '8px',
-          zIndex: 100,
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#fff3cd',
+          padding: '20px',
         }}
       >
+        <h2>Restauration de données détectée</h2>
+        <p>Une perte de données a été détectée. Une sauvegarde existe.</p>
         <button
-          onClick={() => setViewMode('standard')}
+          onClick={() => setLossDetected(false)}
           style={{
-            padding: '6px 12px',
-            background: viewMode === 'standard' ? '#0066cc' : '#ccc',
-            color: viewMode === 'standard' ? '#fff' : '#000',
+            padding: '12px 24px',
+            background: '#0066cc',
+            color: '#fff',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: viewMode === 'standard' ? 'bold' : 'normal',
+            fontSize: '14px',
+            marginTop: '12px',
           }}
         >
-          Vue standard
+          Continuer sans restauration
         </button>
-        <button
-          onClick={() => setViewMode('curtain')}
-          style={{
-            padding: '6px 12px',
-            background: viewMode === 'curtain' ? '#0066cc' : '#ccc',
-            color: viewMode === 'curtain' ? '#fff' : '#000',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: viewMode === 'curtain' ? 'bold' : 'normal',
-          }}
-        >
-          Rideau
-        </button>
-
-        {viewMode === 'curtain' && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
-            <label>
-              Gauche:
-              <select
-                value={curtainLeft}
-                onChange={(e) => setCurtainLeft(e.target.value as HistoricLayerId)}
-                style={{ marginLeft: '4px', fontSize: '12px', padding: '4px' }}
-              >
-                <option value="cassini">Cassini</option>
-                <option value="etat-major">État-major</option>
-                <option value="ortho-1950-65">Ortho 1950–65</option>
-                <option value="ortho-irc">IRC</option>
-              </select>
-            </label>
-            <label>
-              Droite:
-              <select
-                value={curtainRight}
-                onChange={(e) => setCurtainRight(e.target.value as HistoricLayerId)}
-                style={{ marginLeft: '4px', fontSize: '12px', padding: '4px' }}
-              >
-                <option value="cassini">Cassini</option>
-                <option value="etat-major">État-major</option>
-                <option value="ortho-1950-65">Ortho 1950–65</option>
-                <option value="ortho-irc">IRC</option>
-              </select>
-            </label>
-          </div>
-        )}
       </div>
+    );
+  }
 
-      {/* Vue */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        {viewMode === 'standard' && <MapView />}
-        {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
-      </div>
-    </div>
-  );
+  return <AppShell />;
 }

@@ -16,6 +16,10 @@ interface MapState {
 
 const STORAGE_KEY = 'treasure-detector:map-state';
 
+export interface MapViewProps {
+  onMapReady?: (map: MapLibreMap) => void;
+}
+
 /**
  * MapView — Carte principale centrée sur la zone
  * - Sélection de fond (Plan IGN / Ortho)
@@ -23,7 +27,7 @@ const STORAGE_KEY = 'treasure-detector:map-state';
  * - Slider de comparaison (rideau) pour avant/après
  * - Persistance de l'état dans localStorage
  */
-export default function MapView() {
+export default function MapView({ onMapReady }: MapViewProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
 
@@ -121,6 +125,11 @@ export default function MapView() {
 
     // Ajouter les contrôles
     map.current.addControl(new NavigationControl(), 'top-right');
+
+    // Notify parent that map is ready
+    if (onMapReady) {
+      onMapReady(map.current);
+    }
 
     // Mise à jour de l'état à chaque changement de vue
     const onMove = () => {

@@ -1,0 +1,37 @@
+{
+  "enabled": true,
+  "lines": {
+    "tonyMontana": [
+      "Ce champ, il est à moi. Tout ce qu'il y a dessous aussi.",
+      "Tu crois que c'est un caillou ? Moi je dis que c'est le début de l'empire.",
+      "Personne creuse ici avant moi, personne.",
+      "D'abord tu trouves la monnaie, ensuite tu trouves le respect.",
+      "Je creuse, donc je suis. Et je suis partout.",
+      "Un détecteur dans la main, un empire sous les pieds.",
+      "Les autres cherchent, moi je trouve.",
+      "Ce signal, c'est mon signal. C'est moi qui décide.",
+      "La terre, c'est ma banque. Et je retire ce que je veux.",
+      "Creuser, c'est respirer pour moi.",
+      "Tous ces trésors, ils m'attendaient. Ils le savaient.",
+      "La pelle, c'est mon roi. Le champ, c'est mon royaume.",
+      "Zéro limite, zéro peur, cent pour cent résultats."
+    ],
+    "argotTerrain": [
+      "Wallah y a un truc là, je le sens",
+      "Akhi c'est ici, creuse",
+      "Starfoullah le signal qu'il vient de faire",
+      "Y a moyen y a moyen, là-dessous",
+      "Sur la tête de ma pelle, ça sonne pas pour rien",
+      "Zarma c'est encore un clou… ou pas",
+      "Hamdullah on a un bon jour",
+      "Makach c'est trop beau pour être vrai",
+      "Inshallah c'est du lourd",
+      "Djabroulek la pelle elle vibre",
+      "Chelou ce bip, faut creuser",
+      "Oublek faut y aller là",
+      "Chkoune qui va trouver ? Moi, c'est sûr.",
+      "Vérité signal bien clair, pas de doute",
+      "Besalama les autres, ici c'est mon terrain"
+    ]
+  }
+}
