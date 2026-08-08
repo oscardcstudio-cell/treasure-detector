@@ -98,7 +98,7 @@ Install the PWA on your phone:
 ```bash
 # From your terminal, try to read someone else's data with your public key
 curl "https://xyzabc.supabase.co/rest/v1/finds?select=*" \
-  -H "Authorization: Bearer YOUR_ANON_KEY"
+  -H "Authorization: Bearer YOUR_ANON_KEY" # gitleaks:allow — exemple documentaire, placeholder
 # Result: 0 rows (RLS denied access, correctly)
 ```
 
