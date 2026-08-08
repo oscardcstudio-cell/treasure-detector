@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Armous-et-Cau — Prospection · Cassini / État-Major / Satellite</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root { --bg:#12100e; --panel:#1c1915; --line:#3a342c; --txt:#efe8dc; --accent:#c98a3a;
+    --me:#3a9bdc; --mine:#ff3b6b;
+    --major:#e0402e; --forti:#e6892b; --voie:#9b6dff; --habitat:#d9b23a; --repere:#7fb2d6; }
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--txt)}
+  #map{position:absolute;inset:0}
+  .panel{position:absolute;top:12px;left:12px;z-index:1000;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;width:294px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-height:calc(100vh - 24px);overflow:auto}
+  .panel h1{font-size:15px;margin:0 0 2px;letter-spacing:.2px}
+  .panel .sub{font-size:11px;opacity:.6;margin:0 0 12px}
+  .row{margin:10px 0}
+  .row label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px}
+  .row label b{color:var(--accent);font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .base{display:flex;gap:6px;margin:6px 0}
+  .btn{background:#26221c;border:1px solid var(--line);color:var(--txt);font-size:12px;
+    padding:8px 10px;border-radius:8px;cursor:pointer;text-align:center}
+  .btn:hover{border-color:var(--accent)}
+  .btn.on{background:var(--accent);border-color:var(--accent);color:#1a1206;font-weight:600}
+  .btn.full{width:100%;box-sizing:border-box;margin:5px 0}
+  .btn.me{background:#173447;border-color:#2b5f80;color:#cfe8f7}
+  .base .btn{flex:1}
+  .sec{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .sec h2{font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.6;margin:0 0 8px}
+  .legend .lg{display:flex;align-items:center;gap:8px;font-size:11.5px;margin:5px 0;cursor:pointer;user-select:none}
+  .legend .lg.off{opacity:.35}
+  .legend .lg i{width:12px;height:12px;border-radius:50%;border:2px solid #fff;flex:0 0 auto}
+  #list{font-size:12px}
+  #list .item{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)}
+  #list .item span{cursor:pointer}
+  #list .item span:hover{color:var(--accent)}
+  #list .item a{color:#9a8f7d;cursor:pointer;text-decoration:none;font-size:14px;line-height:1}
+  .empty{opacity:.5;font-size:11.5px;font-style:italic}
+  .hint{font-size:10.5px;line-height:1.45;opacity:.72;margin-top:10px}
+  .hint b{color:var(--accent)}
+  .leaflet-container{background:#000}
+  .leaflet-popup-content{font-size:12.5px;line-height:1.45;width:230px}
+  .leaflet-popup-content .tt{font-size:10.5px;opacity:.7;text-transform:uppercase;letter-spacing:.4px}
+  .leaflet-popup-content .fi{font-size:10.5px;opacity:.7;margin-top:4px}
+  .adding{cursor:crosshair !important}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="panel">
+  <h1>Armous-et-Cau — Prospection</h1>
+  <p class="sub">Cartes anciennes + cibles archéologiques · IGN & OSM</p>
+
+  <div class="base">
+    <button id="b-sat" class="btn on">Satellite</button>
+    <button id="b-plan" class="btn">Plan</button>
+  </div>
+
+  <div class="row">
+    <label>Cassini (XVIIIᵉ) <b id="v-cas">55%</b></label>
+    <input type="range" id="op-cas" min="0" max="100" value="55">
+  </div>
+  <div class="row">
+    <label>État-Major (1820–1866) <b id="v-em">0%</b></label>
+    <input type="range" id="op-em" min="0" max="100" value="0">
+  </div>
+
+  <button id="b-geo" class="btn full me">Ma position (GPS)</button>
+  <button id="b-add" class="btn full">+ Ajouter un point (clic sur la carte)</button>
+
+  <div class="sec legend">
+    <h2>Cibles (clic = masquer/afficher)</h2>
+    <div class="lg" data-cat="major"><i style="background:var(--major)"></i>Sites majeurs — motte, villages/églises disparus</div>
+    <div class="lg" data-cat="forti"><i style="background:var(--forti)"></i>Fortifié / religieux — castérot, prieuré, hagiotoponymes</div>
+    <div class="lg" data-cat="voie"><i style="background:var(--voie)"></i>Voie ancienne — carrère, peyrères</div>
+    <div class="lg" data-cat="habitat"><i style="background:var(--habitat)"></i>Habitat / indices — métairies, essart, four</div>
+    <div class="lg" data-cat="repere"><i style="background:var(--repere)"></i>Repères — église actuelle, château voisin</div>
+  </div>
+
+  <div class="sec">
+    <h2>Mes points</h2>
+    <div id="list"><div class="empty">Aucun point ajouté pour l'instant.</div></div>
+    <button id="b-gpx" class="btn full">Exporter en GPX</button>
+    <button id="b-clear" class="btn full">Tout effacer</button>
+  </div>
+
+  <div class="hint">
+    Positions <b>exactes</b> (lieux-dits OSM) ; l'interprétation archéo est une <b>déduction toponymique</b> à confirmer sur place. Baisse Cassini pour repérer un bâtiment <b>disparu aujourd'hui</b> près d'une cible, puis « Ajouter un point ».
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const CENTER=[43.5686,0.1866];
+  const ign=(layer,fmt,zmax)=>L.tileLayer(
+    'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
+    +'&LAYER='+layer+'&STYLE=normal&TILEMATRIXSET=PM'
+    +'&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT='+fmt,
+    {minZoom:6,maxZoom:19,maxNativeZoom:zmax,tileSize:256,attribution:'IGN — Géoplateforme'});
+
+  const sat=ign('ORTHOIMAGERY.ORTHOPHOTOS','image/jpeg',19);
+  const plan=ign('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2','image/png',19);
+  const cassini=ign('BNF-IGNF_GEOGRAPHICALGRIDSYSTEMS.CASSINI','image/png',14);
+  const etatmaj=ign('GEOGRAPHICALGRIDSYSTEMS.ETATMAJOR40','image/jpeg',15);
+
+  const map=L.map('map',{center:CENTER,zoom:14,layers:[sat,cassini,etatmaj]});
+  cassini.setOpacity(0.55); etatmaj.setOpacity(0);
+
+  function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+  const dot=(color,r=13)=>L.divIcon({className:'',iconSize:[r+4,r+4],iconAnchor:[(r+4)/2,(r+4)/2],
+    html:'<div style="width:'+r+'px;height:'+r+'px;border-radius:50%;background:'+color+';border:2px solid #fff;box-shadow:0 0 5px rgba(0,0,0,.7)"></div>'});
+
+  // ================= CIBLES ARCHÉO (positions OSM exactes) =================
+  const CAT={major:'--major',forti:'--forti',voie:'--voie',habitat:'--habitat',repere:'--repere'};
+  const POI=[
+    {cat:'major',ll:[43.55358,0.19112],name:"Lamothe — motte castrale probable",
+      tt:"Château de terre · médiéval (XIᵉ-XIIIᵉ)",
+      find:"Monnaies féodales, ferronnerie, plomb, mobilier médiéval.",
+      fi:"Toponyme 'la mothe' = motte. Cœur seigneurial probable."},
+    {cat:'major',ll:[43.57179,0.18647],name:"Église disparue de Cau",
+      tt:"Édifice religieux · médiéval-moderne",
+      find:"Plomb de vitrail, monnaies de dévotion, objets liturgiques. Sépultures possibles : ne pas creuser.",
+      fi:"Lieux-dits 'Derrière l'Église' + 'Presbytère de Cau' encadrent le site."},
+    {cat:'major',ll:[43.57283,0.19164],name:"Le Cau — ancien village",
+      tt:"Village disparu · médiéval-moderne",
+      find:"Monnaies, boutons, boucles, dés, ferraille domestique.",
+      fi:"L'une des deux paroisses fondatrices de la commune."},
+    {cat:'major',ll:[43.56254,0.17489],name:"Église disparue d'Armous (Cimetière d'Armous)",
+      tt:"Édifice religieux · médiéval-moderne",
+      find:"Plomb, monnaies de dévotion, objets liturgiques.",
+      fi:"Le cimetière conserve l'emplacement de l'ancienne église rasée."},
+    {cat:'major',ll:[43.54944,0.19009],name:"A l'Église (sud) — chapelle disparue ?",
+      tt:"Lieu de culte disparu · médiéval",
+      find:"Plomb, monnaies, éléments d'édifice.",
+      fi:"Toponyme 'A l'Église' sans église actuelle → édifice disparu probable."},
+
+    {cat:'forti',ll:[43.57655,0.17450],name:"Au Castérot — site fortifié probable",
+      tt:"Petit fort / castet · médiéval",
+      find:"Ferronnerie, pointes, monnaies, plomb.",
+      fi:"'Castérot' = petit château. Trois lieux-dits Castérot groupés ici."},
+    {cat:'forti',ll:[43.55774,0.18818],name:"Au Priou — prieuré probable",
+      tt:"Établissement religieux · médiéval",
+      find:"Monnaies, plomb, objets religieux, ferronnerie.",
+      fi:"'Priou' = prieuré. Contexte Case-Dieu / Saint-Mont."},
+    {cat:'forti',ll:[43.58031,0.17065],name:"Saint-Lannes — hagiotoponyme",
+      tt:"Ancien lieu de culte · médiéval",
+      find:"Monnaies, plomb, indices d'édifice.",
+      fi:"Nom de saint sans église actuelle → chapelle disparue possible."},
+    {cat:'forti',ll:[43.58878,0.20095],name:"Saint-Mesplin — hagiotoponyme",
+      tt:"Ancien lieu de culte · médiéval",
+      find:"Monnaies, plomb, indices d'édifice.",
+      fi:"Nom de saint isolé → ancienne chapelle possible."},
+
+    {cat:'voie',ll:[43.57094,0.20128],name:"Las Carretères — voie ancienne",
+      tt:"Chemin / voie · antique à moderne",
+      find:"Monnaies perdues, ferrures, plombs, clous de chaussure.",
+      fi:"'Carrère' = voie. Axe de passage ancien."},
+    {cat:'voie',ll:[43.57270,0.20148],name:"Les Peyrères — empierrement / voie",
+      tt:"Tronçon pierreux · antique ?",
+      find:"Objets perdus le long, monnaies, possible mobilier romain.",
+      fi:"'Peyre' = pierre, jouxte Las Carretères → chaussée empierrée possible."},
+    {cat:'voie',ll:[43.54173,0.16948],name:"A Carrère (sud) — chemin ancien",
+      tt:"Chemin · ancien",
+      find:"Monnaies et objets perdus le long du passage.",
+      fi:"Toponyme de voie, secteur sud de la commune."},
+
+    {cat:'habitat',ll:[43.55501,0.18731],name:"Le Bourdiou — métairie ancienne",
+      tt:"Ferme / borde · XVIᵉ-XIXᵉ",
+      find:"Monnaies royales (doubles tournois, liards), boutons, boucles, dés.",
+      fi:"'Bourdiou' = métairie. Bon rapport temps/trouvailles."},
+    {cat:'habitat',ll:[43.55865,0.19475],name:"Au Sarthou — essart médiéval",
+      tt:"Défrichement · médiéval",
+      find:"Ferraille agricole, monnaies, indices d'occupation.",
+      fi:"'Sartou/essart' = terre défrichée au Moyen Âge."},
+    {cat:'habitat',ll:[43.56176,0.20341],name:"Au Four — ancien four",
+      tt:"Four (chaux/tuile/pain) · ancien",
+      find:"Scories, terre cuite, ferronnerie, monnaies.",
+      fi:"Toponyme 'Four' = installation artisanale ancienne."},
+
+    {cat:'repere',ll:[43.57359,0.18760],name:"Église actuelle Saint-Martin",
+      tt:"Repère · XIXᵉ",
+      find:"—",
+      fi:"Bâtie avec les pierres des deux églises disparues d'Armous et Cau."},
+    {cat:'repere',ll:[43.55041,0.17997],name:"Château de Flourès",
+      tt:"Repère · manoir",
+      find:"—",
+      fi:"Château voisin (limite sud-ouest). Contexte seigneurial."}
+  ];
+
+  const layers={}; Object.keys(CAT).forEach(c=>layers[c]=L.layerGroup().addTo(map));
+  POI.forEach(p=>{
+    const col=css(CAT[p.cat]);
+    const html='<div class="tt">'+p.tt+'</div><b>'+p.name+'</b>'
+      +(p.find&&p.find!=='—'?'<br><b>À chercher :</b> '+p.find:'')
+      +'<div class="fi">'+p.fi+'</div>';
+    L.marker(p.ll,{icon:dot(col)}).addTo(layers[p.cat]).bindPopup(html);
+  });
+  // tracé indicatif de la Ténarèze (axe de crête NE-SO reliant les toponymes de voie)
+  const tenareze=[[43.57270,0.20148],[43.57094,0.20128],[43.5650,0.1850],[43.54173,0.16948]];
+  L.polyline(tenareze,{color:css('--voie'),weight:3,dashArray:'9,7',opacity:.85})
+    .addTo(layers.voie)
+    .bindPopup('<div class="tt">Voie · protohistorique puis romaine</div><b>Ténarèze / Route de César</b><br><b>Tracé indicatif</b> (axe de crête NE-SO) — à affiner sur le terrain.<div class="fi">Le long : monnaies gauloises/romaines, fibules, objets perdus.</div>');
+
+  document.querySelectorAll('.legend .lg').forEach(el=>{
+    el.onclick=()=>{const c=el.dataset.cat;
+      if(map.hasLayer(layers[c])){map.removeLayer(layers[c]);el.classList.add('off');}
+      else{map.addLayer(layers[c]);el.classList.remove('off');}};
+  });
+
+  // ================= ma position GPS =================
+  let meMarker=null, meCircle=null;
+  document.getElementById('b-geo').onclick=()=>{
+    if(!navigator.geolocation){alert("GPS non disponible.");return;}
+    navigator.geolocation.getCurrentPosition(p=>{
+      const ll=[p.coords.latitude,p.coords.longitude];
+      if(meMarker){map.removeLayer(meMarker);map.removeLayer(meCircle);}
+      meMarker=L.marker(ll,{icon:dot(css('--me'),16)}).addTo(map).bindPopup('Ma position').openPopup();
+      meCircle=L.circle(ll,{radius:p.coords.accuracy||20,color:css('--me'),weight:1,fillOpacity:.1}).addTo(map);
+      map.setView(ll,17);
+    },err=>alert("Position indisponible : "+err.message+"\n(autorise la localisation)"),
+    {enableHighAccuracy:true,timeout:10000});
+  };
+
+  // ================= mes points (localStorage) =================
+  const KEY='armous-points';
+  let mine=JSON.parse(localStorage.getItem(KEY)||'[]');
+  let markers=[]; let adding=false;
+  const listEl=document.getElementById('list');
+  function save(){localStorage.setItem(KEY,JSON.stringify(mine));}
+  function esc(s){return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));}
+  function render(){
+    markers.forEach(m=>map.removeLayer(m)); markers=[];
+    listEl.innerHTML= mine.length? '' : '<div class="empty">Aucun point ajouté pour l\'instant.</div>';
+    mine.forEach((pt,i)=>{
+      const mk=L.marker([pt.lat,pt.lng],{icon:dot(css('--mine'))}).addTo(map)
+        .bindPopup('<b>'+esc(pt.name)+'</b><br>'+pt.lat.toFixed(5)+', '+pt.lng.toFixed(5));
+      markers.push(mk);
+      const div=document.createElement('div');div.className='item';
+      div.innerHTML='<span>'+esc(pt.name)+'</span><a title="supprimer">✕</a>';
+      div.querySelector('span').onclick=()=>{map.setView([pt.lat,pt.lng],17);mk.openPopup();};
+      div.querySelector('a').onclick=()=>{mine.splice(i,1);save();render();};
+      listEl.appendChild(div);
+    });
+  }
+  const addBtn=document.getElementById('b-add');
+  addBtn.onclick=()=>{
+    adding=!adding; addBtn.classList.toggle('on',adding);
+    addBtn.textContent= adding? 'Clique sur la carte pour poser le point…' : '+ Ajouter un point (clic sur la carte)';
+    document.getElementById('map').classList.toggle('adding',adding);
+  };
+  map.on('click',e=>{
+    if(!adding)return;
+    const name=prompt("Nom / description du point :","Bâtiment disparu ?");
+    if(name!==null){mine.push({name:name||'Point',lat:e.latlng.lat,lng:e.latlng.lng});save();render();}
+    adding=false;addBtn.classList.remove('on');
+    addBtn.textContent='+ Ajouter un point (clic sur la carte)';
+    document.getElementById('map').classList.remove('adding');
+  });
+  document.getElementById('b-clear').onclick=()=>{if(mine.length&&confirm("Effacer tous tes points ?")){mine=[];save();render();}};
+  document.getElementById('b-gpx').onclick=()=>{
+    if(!mine.length){alert("Aucun point à exporter.");return;}
+    let g='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Armous prospection" xmlns="http://www.topografix.com/GPX/1/1">\n';
+    mine.forEach(p=>{g+='  <wpt lat="'+p.lat+'" lon="'+p.lng+'"><name>'+esc(p.name)+'</name></wpt>\n';});
+    g+='</gpx>';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([g],{type:'application/gpx+xml'}));a.download='armous-points.gpx';a.click();
+  };
+  render();
+
+  // ================= fonds & opacités =================
+  const bSat=document.getElementById('b-sat'),bPlan=document.getElementById('b-plan');
+  bSat.onclick=()=>{if(map.hasLayer(plan))map.removeLayer(plan);map.addLayer(sat);sat.bringToBack();bSat.classList.add('on');bPlan.classList.remove('on');};
+  bPlan.onclick=()=>{if(map.hasLayer(sat))map.removeLayer(sat);map.addLayer(plan);plan.bringToBack();bPlan.classList.add('on');bSat.classList.remove('on');};
+  const cas=document.getElementById('op-cas'),em=document.getElementById('op-em');
+  const vcas=document.getElementById('v-cas'),vem=document.getElementById('v-em');
+  cas.oninput=()=>{cassini.setOpacity(cas.value/100);vcas.textContent=cas.value+'%';};
+  em.oninput=()=>{etatmaj.setOpacity(em.value/100);vem.textContent=em.value+'%';};
+
+  const fit=()=>map.invalidateSize();
+  window.addEventListener('resize',fit);setTimeout(fit,200);setTimeout(fit,800);
+</script>
+</body>
+</html>
