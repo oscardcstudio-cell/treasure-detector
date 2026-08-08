@@ -40,12 +40,14 @@ interface ScoringLayerProps {
  * les mutations doivent se faire dans `fn`, exécuté d'un seul bloc synchrone
  * une fois le style prêt (aucun await entre les mutations).
  */
-async function withStyleReady<T>(map: MapLibreMap, fn: () => T, timeoutMs = 15000): Promise<T> {
+async function withStyleReady<T>(map: MapLibreMap, fn: () => T, timeoutMs = 30000): Promise<T> {
   if (!map.getStyle()) {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         map.off('styledata', onStyleData);
-        reject(new Error('La carte ne s’est pas initialisée — recharger la page'));
+        // Démarrage très lent (vieux téléphone, base locale occupée) ou carte
+        // détruite entre-temps : un nouveau clic repart sur des bases saines.
+        reject(new Error('La carte n’était pas prête — réessayer'));
       }, timeoutMs);
       const onStyleData = () => {
         if (!map.getStyle()) return;

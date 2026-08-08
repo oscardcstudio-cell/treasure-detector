@@ -195,6 +195,22 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     map.current = instance;
 
     instance.addControl(new NavigationControl(), 'top-right');
+
+    /**
+     * La carte peut naître dans un conteneur pas encore mesuré (0×0 pendant le
+     * premier layout) : MapLibre retombe alors sur un canvas 400×300 ET avale
+     * volontairement le premier événement de son propre ResizeObserver — celui
+     * qui portait la vraie taille. Si le conteneur ne bouge plus ensuite, la
+     * carte reste tronquée en haut à gauche pour toujours (constaté en prod).
+     * Notre propre observateur, lui, reçoit l'événement initial et recale le
+     * canvas immédiatement.
+     */
+    let resizeObserver: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => instance.resize());
+      resizeObserver.observe(mapContainer.current);
+    }
+
     setMapInstance(instance);
     onMapReady?.(instance);
 
@@ -212,6 +228,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     instance.on('moveend', onMoveEnd);
 
     return () => {
+      resizeObserver?.disconnect();
       instance.off('moveend', onMoveEnd);
       instance.remove();
       map.current = null;
