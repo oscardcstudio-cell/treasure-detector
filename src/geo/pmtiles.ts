@@ -134,7 +134,7 @@ export async function getPMTilesMetadata(pmtilesUrl: string): Promise<{
       minZoom: 0,
       maxZoom: 14,
     };
-  } catch (_error) {
+  } catch {
     // Silencieux en cas d'erreur (fichier absent, etc.)
     return null;
   }

@@ -174,7 +174,7 @@ function getCellCenter(h3Index: string): [number, number] {
     const centerLng = sumLng / boundary.length;
 
     return [centerLng, centerLat]; // Return [lon, lat] for GeoJSON
-  } catch (e) {
+  } catch {
     // Fallback if boundary computation fails
     return [0.18, 43.56];
   }
