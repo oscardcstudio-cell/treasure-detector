@@ -1,6 +1,18 @@
 # État du projet — treasure-detector
 
-> Mis à jour le 2026-08-08 au soir. Plan complet : [`docs/PLAN.md`](../docs/PLAN.md) · Verdict v1 : [`T4.2_VERDICT.md`](T4.2_VERDICT.md).
+> Mis à jour le 2026-08-08 tard le soir. Plan complet : [`docs/PLAN.md`](../docs/PLAN.md) · Verdict v1 : [`T4.2_VERDICT.md`](T4.2_VERDICT.md).
+
+## Fix majeur du soir (commit 0ce013c) — heatmap scoring enfin visible
+
+Deux bugs indépendants masquaient la carte de chaleur (calcul OK, rendu jamais affiché) :
+1. **Worker MapLibre v6 absent du build Vite** — résolution d'URL runtime vers `/assets/maplibre-gl-worker.mjs` (404), échec 100% silencieux : rasters OK, toute source GeoJSON bloquée. Fix : `src/map/maplibreWorker.ts` (`setWorkerUrl` + import `?worker&url`) importé en tête de `main.tsx` + `worker.format: 'es'` dans `vite.config.ts`. Garde-fou : `src/map/__tests__/maplibre-worker.test.ts`.
+2. **MapView recréait la carte à chaque geste** (deps de l'effet incluaient center/zoom réécrits par le handler move). Fix : création unique (deps `[]`), fond/historique via effets dédiés + `beforeId`, persistance sur `moveend`.
+
+Vérifié en navigateur (screenshots) : hexagones colorés visibles, survivent au pan, WhyPanel s'ouvre au tap avec contributions. 255 tests verts.
+
+### Suite (même soirée) — premier clic « Score Zone » corrigé
+
+Dernier accroc : au tout premier clic juste après l'ouverture, « Style is not done loading » s'affichait sous le bouton (le 2e clic passait). Cause : dans `ScoringLayer.tsx`, seul `addSource` était protégé par le retry — les deux `addLayer` juste derrière font le même contrôle interne MapLibre et restaient hors protection. Fix : `withStyleReady` attend l'invariant exact de MapLibre v6 (`map.getStyle()` truthy ⇔ mutations acceptées, signal `styledata`) puis exécute source + couches + handlers en un seul bloc synchrone. Garde-fou : `src/scoring/__tests__/scoring-layer-first-click.test.tsx` (fausse carte qui rejette les mutations tant que le style n'est pas chargé). 257 tests verts, vérifié en navigateur (premier clic → hexagones, zéro erreur).
 
 ## Où on en est
 
