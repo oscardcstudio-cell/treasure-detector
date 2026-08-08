@@ -1,0 +1,34 @@
+name: Supabase Ping — Keep project awake
+
+# Runs every Monday at 08:00 UTC to prevent Supabase free-tier auto-pause
+# On free tier, projects pause after 7 days of inactivity. This cron prevents that.
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Monday 08:00 UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          if [ -z "${{ secrets.SUPABASE_URL }}" ] || [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "Skipping: Supabase secrets not configured (normal during development)"
+            exit 0
+          fi
+
+          # Simple SELECT query via REST API to keep the project awake
+          # Uses the anon key (public, safe to use in CI)
+          # This query counts sessions — harmless, returns quickly
+          curl -X GET \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/sessions?select=count&limit=1" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            -v
+
+      - name: Status check
+        if: failure()
+        run: |
+          echo "⚠️ Supabase ping failed. Check that SUPABASE_URL and SUPABASE_ANON_KEY are set in GitHub Secrets."
+          echo "See: https://github.com/${{ github.repository }}/settings/secrets/actions"

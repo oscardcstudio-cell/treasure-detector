@@ -53,7 +53,7 @@ export class TreasureDB extends Dexie {
       detectorPresets: '&id',
       surfaceObservations: '++id, &id, sessionId, at, syncedAt, kind',
       scoreCells: '&h3',
-      syncQueue: '++id, entityType, createdAt, attemptCount',
+      syncQueue: '++id, entityId, entityType, createdAt, attemptCount',
     });
 
     // Hook: validate Find.digPointId exists before insert/update

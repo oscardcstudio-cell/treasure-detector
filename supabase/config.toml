@@ -1,0 +1,29 @@
+# Supabase configuration for treasure-detector
+# Generated automatically; modify only if needed
+# See: https://supabase.com/docs/guides/local-development/cli/config
+
+[project]
+# Project ID will be set by `supabase link` after Oscar creates the project
+project_id = "placeholder_project_id"
+# The default organization should be set by `supabase link`
+account_id = ""
+
+[api]
+# Port to use for local development (optional)
+# port = 54321
+
+[db]
+# Port for local PostgreSQL instance (optional)
+# port = 54322
+# Major version of PostgreSQL to use (14 or 15)
+major_version = 15
+
+[studio]
+# Port for Supabase Studio (optional)
+# port = 54323
+
+# Function configurations (optional)
+# [functions.function_name]
+# verify_jwt = true
+
+# More details: https://supabase.com/docs/reference/cli/config
