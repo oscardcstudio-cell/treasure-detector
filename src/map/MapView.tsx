@@ -217,7 +217,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
       map.current = null;
       setMapInstance(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // deps [] volontaire : création unique, cf. commentaire INVARIANT ci-dessus
   }, []);
 
   // Changement de fond de carte — sans recréer la carte
@@ -267,8 +267,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
 
     whenStyleReady(instance, apply);
     // l'opacité a son propre effet : la ré-appliquer ici recréerait la couche
-    // à chaque cran du curseur.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // à chaque cran du curseur (deps volontairement sans historicOpacity).
   }, [mapInstance, mapState.activeHistoricLayer]);
 
   // Mettre à jour l'opacité de la couche historique
