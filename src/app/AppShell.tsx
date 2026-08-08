@@ -3,8 +3,9 @@
  * Combines map, session HUD, quick actions, and navigation tabs
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
+import zoneConfig from '../../config/zone.json';
 import MapView from '../map/MapView';
 import Curtain from '../map/Curtain';
 import { HistoricLayerId } from '../map/layers';
@@ -16,6 +17,14 @@ import { getDatabase } from '../db/schema';
 import { DigPoint } from '../db/types';
 import { useGPSSession } from './useGPSSession';
 import { useMapIntegration } from './useMapIntegration';
+import { SyncBadge } from '../sync/SyncBadge';
+import { setupNetworkListener, drainSyncQueue } from '../sync';
+import { initPMTilesProtocol } from '../geo';
+import { DownloadZone } from '../geo/DownloadZone';
+import { OutingWindow } from '../window/OutingWindow';
+import { ZonesLayer } from '../zones';
+import { PresetOverlay } from '../presets/PresetOverlay';
+import type { ScoreCell } from '../scoring/types';
 
 type ViewMode = 'standard' | 'curtain';
 type TabMode = 'map' | 'finds' | 'menu';
@@ -26,6 +35,23 @@ export default function AppShell() {
   const [curtainRight, setCurtainRight] = useState<HistoricLayerId>('cassini');
   const [tabMode, setTabMode] = useState<TabMode>('map');
   const [mapRef, setMapRef] = useState<MapLibreMap | null>(null);
+  const [showZonesLayer, setShowZonesLayer] = useState(true);
+  const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
+
+  // Initialize sync on mount (network listener)
+  useEffect(() => {
+    (async () => {
+      try {
+        // Setup network listener for sync queue
+        setupNetworkListener();
+
+        // Drain any pending sync items on startup
+        await drainSyncQueue();
+      } catch (error) {
+        console.error('Failed to initialize sync:', error);
+      }
+    })();
+  }, []);
 
   // GPS session orchestration
   const gpsSession = useGPSSession({ enabled: true });
@@ -37,6 +63,16 @@ export default function AppShell() {
     currentPosition: gpsSession.currentPosition,
     sessionActive: gpsSession.state === 'active',
   });
+
+  // Initialize PMTiles protocol when map is ready
+  useEffect(() => {
+    if (!mapRef) return;
+    try {
+      initPMTilesProtocol(mapRef);
+    } catch (error) {
+      console.error('Failed to initialize PMTiles protocol:', error);
+    }
+  }, [mapRef]);
 
   const handleStartSession = useCallback(async () => {
     await gpsSession.startSession('Nouvelle prospection');
@@ -57,9 +93,10 @@ export default function AppShell() {
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Top controls: view mode selector */}
-      <div style={{ padding: '8px 12px', background: '#f5f5f5', borderBottom: '1px solid #ddd', display: 'flex', gap: '8px', zIndex: 100 }}>
-        <button
+      {/* Top controls: view mode selector + sync badge */}
+      <div style={{ padding: '8px 12px', background: '#f5f5f5', borderBottom: '1px solid #ddd', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', zIndex: 100 }}>
+        <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+          <button
           onClick={() => setViewMode('standard')}
           style={{
             padding: '6px 12px',
@@ -90,7 +127,7 @@ export default function AppShell() {
           Rideau
         </button>
         {viewMode === 'curtain' && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
             <label>
               Gauche:
               <select
@@ -119,6 +156,8 @@ export default function AppShell() {
             </label>
           </div>
         )}
+        </div>
+        <SyncBadge />
       </div>
 
       {/* Session HUD (if session active) */}
@@ -150,14 +189,58 @@ export default function AppShell() {
         {/* Show map in map tab mode OR show tab panel content */}
         {tabMode === 'map' ? (
           <>
-            {viewMode === 'standard' && <MapView onMapReady={setMapRef} />}
+            {viewMode === 'standard' && <MapView onMapReady={setMapRef} onScoredCellSelected={setSelectedCell} />}
             {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
+            {/* Zones layer toggle (only in map view) */}
+            {showZonesLayer && mapRef && <ZonesLayer map={mapRef} isVisible={showZonesLayer} />}
           </>
         ) : tabMode === 'finds' ? (
           <FindsList digs={[]} finds={new Map()} onDelete={async () => {}} />
         ) : (
-          <div style={{ padding: '12px', background: '#f5f5f5', overflowY: 'auto' }}>
-            <StorageMeter />
+          <div style={{ padding: '12px', background: '#f5f5f5', overflowY: 'auto', flex: 1 }}>
+            {/* Menu tab: settings, offline downloads, outing window, storage */}
+            <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+              <h2 style={{ marginTop: 0 }}>Menu</h2>
+
+              {/* Outing window */}
+              {gpsSession.currentPosition && (
+                <div style={{ marginBottom: '20px' }}>
+                  <OutingWindow
+                    position={[gpsSession.currentPosition.coord[0], gpsSession.currentPosition.coord[1]]}
+                  />
+                </div>
+              )}
+
+              {/* Download zone */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3>Offline</h3>
+                <DownloadZone
+                  bbox={zoneConfig.bbox as [number, number, number, number]}
+                  selectedLayerIds={['plan-ign', 'ortho']}
+                  minZoom={10}
+                  maxZoom={18}
+                />
+              </div>
+
+              {/* Storage meter */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3>Stockage</h3>
+                <StorageMeter />
+              </div>
+
+              {/* Zones layer toggle */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3>Couches</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showZonesLayer}
+                    onChange={(e) => setShowZonesLayer(e.target.checked)}
+                  />
+                  <span>Zones signalées</span>
+                </label>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -240,6 +323,15 @@ export default function AppShell() {
           Démarrer la session
         </button>
       )}
+
+      {/* Preset overlay (shows when a cell is selected) */}
+      <PresetOverlay
+        activeCell={selectedCell}
+        resolveContext={{
+          soilCondition: undefined,
+        }}
+        onClose={() => setSelectedCell(undefined)}
+      />
     </div>
   );
 }

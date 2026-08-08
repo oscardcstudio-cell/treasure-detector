@@ -24,3 +24,8 @@ declare module '*/presets.json' {
   const content: Record<string, unknown>;
   export default content;
 }
+
+declare module '*/toponymes.geojson' {
+  const content: Record<string, unknown>;
+  export default content;
+}

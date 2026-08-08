@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Map as MapLibreMap, NavigationControl, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zoneConfig from '../../config/zone.json';
+import scoringConfig from '../../config/scoring.json';
 import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId } from './layers';
+import { ScoringLayer } from '../scoring/ScoringLayer';
+import type { ScoreCell } from '../scoring/types';
 
 interface MapState {
   baseLayer: string;
@@ -18,6 +21,7 @@ const STORAGE_KEY = 'treasure-detector:map-state';
 
 export interface MapViewProps {
   onMapReady?: (map: MapLibreMap) => void;
+  onScoredCellSelected?: (cell: ScoreCell | undefined) => void;
 }
 
 /**
@@ -27,9 +31,19 @@ export interface MapViewProps {
  * - Slider de comparaison (rideau) pour avant/après
  * - Persistance de l'état dans localStorage
  */
-export default function MapView({ onMapReady }: MapViewProps = {}) {
+export default function MapView({ onMapReady, onScoredCellSelected }: MapViewProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
+  const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
+  const [topoGeoJSON, setTopoGeoJSON] = useState<any>(null);
+
+  // Load toponymy data on mount
+  useEffect(() => {
+    fetch('/data/derived/toponymes.geojson')
+      .then((res) => res.json())
+      .then(setTopoGeoJSON)
+      .catch((err) => console.error('Failed to load toponymes:', err));
+  }, []);
 
   const [mapState, setMapState] = useState<MapState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -170,10 +184,26 @@ export default function MapView({ onMapReady }: MapViewProps = {}) {
     setMapState((prev) => ({ ...prev, historicOpacity: clampedOpacity }));
   };
 
+  // Notify parent of cell selection
+  useEffect(() => {
+    onScoredCellSelected?.(selectedCell);
+  }, [selectedCell, onScoredCellSelected]);
+
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Carte */}
-      <div style={{ flex: 1, position: 'relative' }} ref={mapContainer} />
+      <div style={{ flex: 1, position: 'relative' }} ref={mapContainer}>
+        {/* Scoring layer + heatmap visualization */}
+        {map.current && topoGeoJSON && (
+          <ScoringLayer
+            map={map.current}
+            zoneConfig={zoneConfig}
+            scoringConfig={scoringConfig as any}
+            topoGeoJSON={topoGeoJSON}
+            onCellSelected={setSelectedCell}
+          />
+        )}
+      </div>
 
       {/* Panneau de contrôle — mobile-first */}
       <div

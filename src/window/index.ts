@@ -204,8 +204,6 @@ function getHumidityLevel(weatherData: WeatherData | null): string {
 }
 
 /**
- * Export for React component usage.
+ * Type exports for internal use
  */
-export { WeatherData } from './weather';
-export { CropType } from './calendar';
-export { DaylightInfo } from './daylight';
+export type { CropType } from './calendar';

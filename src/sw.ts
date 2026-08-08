@@ -10,7 +10,17 @@
 
 /// <reference lib="webworker" />
 
-declare const self: ServiceWorkerGlobalScope;
+// Extend ServiceWorkerGlobalScope to include __WB_MANIFEST
+interface ExtendedServiceWorkerGlobalScope extends ServiceWorkerGlobalScope {
+  __WB_MANIFEST?: (string | { url: string; revision: string | null })[];
+}
+
+declare const self: ExtendedServiceWorkerGlobalScope;
+
+// Workbox injection point — workbox-build will replace __WB_MANIFEST
+// Do not remove or modify this line
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, prefer-const, no-var
+var __WB_MANIFEST: any = (self as any).__WB_MANIFEST || [];
 
 // Noms des caches par domaine et type
 const TILE_CACHE_NAME = 'ign-tiles-v1';
@@ -103,6 +113,16 @@ async function networkFirst(request: Request): Promise<Response> {
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
     caches.open(APP_CACHE_NAME).then(cache => {
+      // Use workbox-injected manifest if available, else fallback to critical resources
+      if (typeof __WB_MANIFEST !== 'undefined' && Array.isArray(__WB_MANIFEST)) {
+        const urlsToCache = __WB_MANIFEST.map(entry => {
+          return typeof entry === 'string' ? entry : entry.url;
+        });
+        return cache.addAll(urlsToCache).catch(() => {
+          // Silencieusement échouer si le pré-cache échoue (les ressources seront en network-first)
+        });
+      }
+      // Fallback if manifest not yet injected
       return cache.addAll([
         '/',
         '/index.html',

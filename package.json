@@ -14,7 +14,9 @@
     "lint": "eslint src --ext .ts,.tsx",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predev": "mkdir -p public/data/derived && cp -f data/derived/*.geojson public/data/derived/",
+    "prebuild": "mkdir -p public/data/derived && cp -f data/derived/*.geojson public/data/derived/"
   },
   "keywords": [
     "prospection",
