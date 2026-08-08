@@ -21,12 +21,21 @@
 
 | Moment | Attendu de lui | Bloque |
 |---|---|---|
-| Avant T3.1 | **Couverture LiDAR HD du Gers** confirmée (carte IGN, commune en bleu = à confirmer) | tout le rang C du scoring |
-| Avant T3.1 | Plans du **cadastre napoléonien** d'Armous-et-Cau récupérés (AD32) | le meilleur prédicteur du projet |
 | Après T0.1 | Installer la PWA sur son téléphone, retour de lisibilité au soleil | T1.3, T3.5 |
 | Après 1re sortie | Traces réelles → calibrer seuil `ratisse`/`passage_rapide` (0,45 m/s [HYPOTHÈSE]) et fourchettes de sensibilité | §6.1, §9.8 |
 
-Note : l'identifiant WMTS Cassini (ancien bloquant de T1.1) est **levé** — confirmé par le spike (`prototype/FINDINGS.md`).
+### Cadastre napoléonien d'Armous-et-Cau — [FAIT] en ligne (vérifié 2026-08-08)
+
+Portail AD32 : archives32.fr → Fonds numérisés → « Recherche de plans cadastraux napoléoniens » (`FondsNumerises/index.php?type=2`, sélectionner ARMOUS-ET-CAU). **9 planches numérisées, consultables en visionneuse zoomable** (`zoom_n.php`), cote **3P**, géomètres nommés :
+- `3P_..._1` : tableau d'assemblage, 1/10000, 1813 (Daubas)
+- `3P_..._7` + `_8` : **section C1/C2 « dite d'Armous », 1/2500, 1813** — nomme et localise directement le vieux village d'Armous (cible n°1 ; on y lit un « Bourg »)
+- `_2/_3/_4` : section A « de Barroles » · `_5/_6` : section B « de Rozes » (1819) · `_9` : section D « de Mauran »
+- **Piste ouverte** : aucune section « de Cau ». Le noyau de Cau n'est pas une section cadastrale → à croiser (dans une autre section, ou en limite de commune). Reste le point dur de la localisation.
+Reste vrai (§4.4) : plans **non géoréférencés** → calage manuel dans T3.1 (le prix d'entrée du meilleur prédicteur). Consultation en visionneuse ; export pleine résolution à confirmer au moment du calage.
+
+Notes — bloquants levés :
+- Identifiant WMTS Cassini (ancien bloquant de T1.1) — confirmé par le spike (`prototype/FINDINGS.md`).
+- **Couverture LiDAR HD d'Armous-et-Cau** (ancien bloquant du rang C du scoring) — **levé le 2026-08-08** : commune en bleu sur la carte de dispo IGN (https://geoservices.ign.fr/lidarhd) = « nuages et modèles numériques disponibles » (nuages de points + MNT/MNS téléchargeables). Rang C du scoring débloqué.
 
 ## Questions ouvertes non bloquantes (§12)
 
