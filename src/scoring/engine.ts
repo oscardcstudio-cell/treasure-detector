@@ -16,7 +16,7 @@
  * 5. Return ScoreCell[]
  */
 
-import { latLngToCell, cellToBoundary } from 'h3-js';
+import { cellToBoundary, polygonToCells } from 'h3-js';
 import { Contribution, ScoreCell, ScoringConfig, TopoGeoJSON, Zone } from './types';
 
 const EARTH_RADIUS_M = 6371000;
@@ -59,21 +59,17 @@ function getCellsForBbox(
   [minLon, minLat, maxLon, maxLat]: [number, number, number, number],
   resolution: number
 ): string[] {
-  const cells = new Set<string>();
-
-  // Sample points in a grid
-  const latStep = 0.01;
-  const lonStep = 0.01;
-
-  for (let lat = minLat; lat <= maxLat; lat += latStep) {
-    for (let lng = minLon; lng <= maxLon; lng += lonStep) {
-      // h3-js uses (lat, lng) format
-      const cellId = latLngToCell(lat, lng, resolution);
-      cells.add(cellId);
-    }
-  }
-
-  return Array.from(cells);
+  // polygonToCells pave RÉELLEMENT le polygone. L'échantillonnage manuel
+  // précédent (pas de 0,01° ≈ 1,1 km, soit 17× la taille d'une cellule res 10)
+  // ne touchait qu'une poignée de cellules isolées : pas de couverture, pas de
+  // carte de chaleur. h3-js attend des sommets [lat, lng].
+  const ring: Array<[number, number]> = [
+    [minLat, minLon],
+    [minLat, maxLon],
+    [maxLat, maxLon],
+    [maxLat, minLon],
+  ];
+  return polygonToCells([ring], resolution);
 }
 
 /**
@@ -196,6 +192,9 @@ export async function scoreZone(
   // Filter only 'disponible' criteria
   const activeCriteria = config.criteria.filter((c) => c.source.status === 'disponible');
 
+  // Plafond de normalisation : ce qu'une cellule peut cumuler au mieux aujourd'hui
+  const maxAttainableRaw = activeCriteria.reduce((sum, c) => sum + c.weight, 0);
+
   // Pre-process: group features by criterion
   const criteriaFeatures: Map<string, Array<any>> = new Map();
   for (const criterion of activeCriteria) {
@@ -250,12 +249,14 @@ export async function scoreZone(
       cellRawScore += contrib.weight * contrib.value;
     }
 
-    // Normalize raw score to [0, 100]
-    const [rawMin, rawMax] = normConfig.raw_score_range;
+    // Normalisation sur le MAXIMUM RÉELLEMENT ATTEIGNABLE (somme des poids des
+    // critères actifs), pas sur le plafond fixe de 250 du JSON : avec 5 critères
+    // actifs (total 111), diviser par 250 écrase tout sous 25/100 et rend la
+    // carte de chaleur uniformément froide. Se recalibre seul quand T3.1 activera
+    // les critères LiDAR en réserve.
     const [outMin, outMax] = normConfig.output_range;
-    const cellScore =
-      cellRawScore > 0 ? ((cellRawScore - rawMin) / (rawMax - rawMin)) * (outMax - outMin) + outMin : 0;
-    const finalScore = Math.min(outMax, Math.max(outMin, cellScore));
+    const cellScore = maxAttainableRaw > 0 ? (cellRawScore / maxAttainableRaw) * (outMax - outMin) + outMin : 0;
+    const finalScore = Math.round(Math.min(outMax, Math.max(outMin, cellScore)));
 
     if (contributions.length > 0) {
       results.push({

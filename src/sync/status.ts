@@ -6,10 +6,12 @@
  * - Number of photos pending upload
  * - Last sync timestamp
  * - Sync errors (if any)
+ * - Authentication status (required for sync)
  */
 
 import { getQueueSize } from './queue';
 import { getPhotoSyncStates } from './photos';
+import { isAuthenticated } from '../auth/session';
 
 export interface SyncStatus {
   queueSize: number; // entities awaiting sync
@@ -20,6 +22,7 @@ export interface SyncStatus {
   lastSyncTime?: string;
   errors: string[];
   isOnline: boolean;
+  isAuthenticated: boolean; // required for sync to run
 }
 
 let lastSyncTime: string | undefined;
@@ -33,6 +36,7 @@ export async function getSyncStatus(): Promise<SyncStatus> {
   const photoStates = await getPhotoSyncStates();
 
   const isOnline = typeof navigator !== 'undefined' && navigator.onLine;
+  const isAuth = await isAuthenticated();
 
   return {
     queueSize,
@@ -43,6 +47,7 @@ export async function getSyncStatus(): Promise<SyncStatus> {
     lastSyncTime,
     errors: [],
     isOnline,
+    isAuthenticated: isAuth,
   };
 }
 
@@ -61,8 +66,13 @@ export function recordSyncSuccess(): void {
  * - "Syncing..." (currently uploading)
  * - "OK" (all synced, online)
  * - "Hors ligne" (offline, but data safe in queue)
+ * - "Sauvegarde inactive" (not authenticated)
  */
 export function getSyncMessage(status: SyncStatus): string {
+  if (!status.isAuthenticated) {
+    return 'Sauvegarde inactive (non connecté)';
+  }
+
   if (!status.isOnline) {
     return `Hors ligne (${status.queueSize} en attente)`;
   }

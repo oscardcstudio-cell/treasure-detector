@@ -12,9 +12,16 @@
  * - Wi-Fi or good connection: send immediately
  * - No signal or 4G with latency: batch and retry on network return
  * - Partial failure (some rows accepted, some rejected): retry failed rows, keep succeeded
+ *
+ * Auth strategy:
+ * - If no user is authenticated, don't attempt to sync.
+ * - RLS policies require auth.uid() to be present in the request.
+ * - user_id column defaults to auth.uid() in Supabase — no need to inject client-side.
+ * - Anonymous writes are rejected by RLS (401 "row-level security policy violated").
  */
 
 import { getSupabaseClient, isSupabaseReady } from '../lib/supabase';
+import { isAuthenticated } from '../auth/session';
 import {
   UUID,
 } from '../db/types';
@@ -47,6 +54,14 @@ export async function drainSyncQueue(): Promise<{
   const supabase = getSupabaseClient();
   if (!supabase) {
     return { synced: 0, failed: 0, errors: ['No Supabase client'] };
+  }
+
+  // Check if user is authenticated
+  // If not, don't attempt to sync — RLS policies require auth.uid() and will reject all writes
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    console.log('[Sync] Not authenticated, skipping sync queue');
+    return { synced: 0, failed: 0, errors: ['Not authenticated — connect in Menu to sync'] };
   }
 
   let synced = 0;
@@ -228,6 +243,12 @@ async function upsertBatch(
 /**
  * Convert entity object to Postgres row format (camelCase → snake_case).
  * Also add synced_at timestamp.
+ *
+ * CRITICAL: user_id is NOT injected here. It's set server-side via DEFAULT auth.uid()
+ * when the request is authenticated. This ensures data integrity and prevents
+ * confused-deputy attacks (client trying to inject a different user_id).
+ *
+ * The keyMap includes userId→user_id for reference, but we skip it during conversion.
  */
 function convertToRow(entity: any): any {
   const now = new Date().toISOString();
@@ -239,7 +260,7 @@ function convertToRow(entity: any): any {
 
   const keyMap: Record<string, string> = {
     id: 'id',
-    userId: 'user_id',
+    // userId: 'user_id',  // ← NOT injected. Supabase sets via DEFAULT auth.uid()
     sessionId: 'session_id',
     digPointId: 'dig_point_id',
     startedAt: 'started_at',
@@ -271,6 +292,11 @@ function convertToRow(entity: any): any {
   }
 
   for (const [camel, snake] of Object.entries(keyMap)) {
+    // Skip userId — it's set server-side
+    if (camel === 'userId') {
+      continue;
+    }
+
     if (camel in entity) {
       row[snake] = entity[camel];
     }

@@ -47,6 +47,11 @@ vi.mock('../../lib/supabase', () => ({
   isSupabaseReady: () => true,
 }));
 
+// Mock auth module to simulate authenticated user
+vi.mock('../../auth/session', () => ({
+  isAuthenticated: vi.fn().mockResolvedValue(true),
+}));
+
 describe('Sync Push', () => {
   beforeEach(async () => {
     resetDatabaseInstance();

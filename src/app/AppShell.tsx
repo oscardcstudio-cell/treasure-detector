@@ -24,6 +24,7 @@ import { DownloadZone } from '../geo/DownloadZone';
 import { OutingWindow } from '../window/OutingWindow';
 import { ZonesLayer } from '../zones';
 import { PresetOverlay } from '../presets/PresetOverlay';
+import { AuthGate } from '../auth/AuthGate';
 import type { ScoreCell } from '../scoring/types';
 
 type ViewMode = 'standard' | 'curtain';
@@ -240,6 +241,9 @@ export default function AppShell() {
                   <span>Zones signalées</span>
                 </label>
               </div>
+
+              {/* Auth / Online sync */}
+              <AuthGate />
             </div>
           </div>
         )}
