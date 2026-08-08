@@ -14,6 +14,8 @@ Vérifié en navigateur (screenshots) : hexagones colorés visibles, survivent a
 
 Dernier accroc : au tout premier clic juste après l'ouverture, « Style is not done loading » s'affichait sous le bouton (le 2e clic passait). Cause : dans `ScoringLayer.tsx`, seul `addSource` était protégé par le retry — les deux `addLayer` juste derrière font le même contrôle interne MapLibre et restaient hors protection. Fix : `withStyleReady` attend l'invariant exact de MapLibre v6 (`map.getStyle()` truthy ⇔ mutations acceptées, signal `styledata`) puis exécute source + couches + handlers en un seul bloc synchrone. Garde-fou : `src/scoring/__tests__/scoring-layer-first-click.test.tsx` (fausse carte qui rejette les mutations tant que le style n'est pas chargé). 257 tests verts, vérifié en navigateur (premier clic → hexagones, zéro erreur).
 
+Dans la foulée, 2e bug débusqué en vérifiant en prod : **carte tronquée en haut à gauche au chargement à froid** (canvas figé au 400×300 de secours — MapLibre ignore la première mesure de son propre ResizeObserver quand la carte naît dans un conteneur pas encore mesuré). Fix : MapView pose son propre ResizeObserver → `map.resize()`. Garde-fou : `src/map/__tests__/map-resize.test.ts`. Les deux fixes déployés (deploy 0b654ee8 SUCCESS) et vérifiés en prod navigateur : premier clic → « ✓ Scoré », hexagones plein écran, WhyPanel OK. 259 tests verts.
+
 ## Où on en est
 
 **v1 construite, déployée et validée en une journée — verdict T4.2 : GO SOUS CONDITIONS.**
