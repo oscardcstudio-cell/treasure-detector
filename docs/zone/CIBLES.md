@@ -17,7 +17,8 @@
 | **Cibles du spike géolocalisées** | 16 — positions OSM exactes, interprétation toponymique à confirmer en archive |
 | **Cibles toponymiques sans localisation précise** | 7 — lecture IGN/cadastre, calage requis (T3.1) |
 | **Sources exploitées** | Spike FINDINGS, toponymie T2.3, histoire T2.1, cadastre napoléonien (AD32 en ligne), Polge (patronages, à confirmer en salle) |
-| **Sources bloquées** | Gallica (proxy), CAG 32 (consultation AD32 requise), cartulaire La Case-Dieu (AD32 salle) |
+| **Sources explorées T2.4bis** | Gallica BSAG (machine locale) — 28 requêtes, 0 article spécifique Armous-et-Cau trouvé |
+| **Sources bloquées** | Gallica (pérempée — voir §3bis), CAG 32 (consultation AD32 requise), cartulaire La Case-Dieu (AD32 salle) |
 | **Total cibles** | **28 cibles nommées**, dont 16 géolocalisées (WGS84 exact) + 7 à localiser (cadastre) + 5 synthéthiques (regroupements) |
 | **Confiance globale** | Moyenne — fortes évidences toponymiques + géolocalisation spike, mais aucune vérification archivale en ligne (Gallica bloquée) |
 
@@ -247,6 +248,57 @@ Le Midour est une **rivière majeure** (97 km, affluent de l'Adour), son émerge
 
 ---
 
+## Dépouillement documentaire Gallica (BSAG) — Agent T2.4bis, 2026-08-08
+
+### Méthodologie d'accès
+
+- **Endpoint** : https://gallica.bnf.fr/SRU?operation=searchRetrieve&version=1.2&query=...
+- **User-Agent requis** : `Mozilla/5.0 ... (Macintosh) ... Safari/537.36` (curl nu = 403)
+- **Requête éprouvée** : `gallica%20all%20%22<terme>%22%20and%20gallica%20all%20%22<filtre>%22`
+
+### Cible primaire : Bulletin Société archéologique Gers (BSAG)
+
+| Métrique | Résultat |
+|---|---|
+| **Ark du BSAG** | ark:/12148/cb34426497s |
+| **Années couvertes** | ~1860–1930 (65 ans disponibles) |
+| **Requête plein texte BSAG** | Testée : pas de résultats indexés pour « Armous » ; ContentSearch API retour 500 |
+| **Statut accès** | [FAIT] Gallica accessible en machine locale IPv4 |
+| **Mentions « Armous »** | [FAIT] 0 article trouvé dans le BSAG via SRU plein texte |
+| **Mentions « Cau »** | [FAIT] 0 article trouvé (terme trop générique / absent OCR) |
+| **Mentions communes limitrophes** (Beaumarchés, Bassoues, Marciac) | [FAIT] 0 article BSAG ; source locale trouvée : « Histoire de Bassoues... » (Guilhempey) |
+
+### Conclusion pour Armous-et-Cau
+
+**[À VÉRIFIER]** : Aucune mention trouvée dans le BSAG via recherche plein texte Gallica. 
+- Hypothèse 1 : Découvertes non reportées au BSAG (prospection récente ; trouvailles privées)
+- Hypothèse 2 : OCR incomplet du BSAG pour années pertinentes
+- Hypothèse 3 : Mentions sous forme d'hagiotoponymes ou fragmentées dans articles synthétiques
+
+**Recommandation** : Consultation manuelle des fascicules du BSAG (années 1880–1920) par agent T2.1 (AD32 salle) reste nécessaire. Gallica n'a pas comblé le gap — recherche pérempée.
+
+### Sources secondaires historiques localisées (Gallica)
+
+1. **Histoire de Bassoues et de la chapelle de St-Fritz** / abbé Joseph Guilhempey  
+   ark:/12148/bpt6k6518098w — commune limitrophe (6 km, contexte archéo régional)
+
+2. **Histoire de la Gascogne depuis les temps les plus reculés...** / abbé J.-J. Monlezun, Tome 1  
+   ark:/12148/bpt6k83341r — synthèse générale Gascogne, Gers inclus
+
+3. **Manuel de géographie historique, ancienne Gascogne et Béarn...** / J.-F. Bourdeau  
+   ark:/12148/bpt6k9620019x — couvre toutes communes Gers, Landes, Pyrénées
+
+**Utilité** : Contexte régional (villa, motte, sanctuaires) mais pas Armous-et-Cau spécifiquement. À consulter par lecture sélective index/pages initiales.
+
+### Bilan T2.4bis
+
+- **Formes de requête** : SRU + User-Agent Mozilla confirmées (1200+ hits pour « Armous » — surcharge)
+- **Requêtes effectuées** : 28/40 (quota respecté)
+- **Accès BSAG** : Confirmé ; plein texte insuffisant pour Armous-et-Cau
+- **Impact sur CIBLES.md** : **Aucun** — pas de renforcement des cibles existantes [HAUTE], [MOYENNE], [BASSE]
+
+---
+
 ## 4. Sommaire des sources exploitées et manquantes
 
 ### Sources exploitées (ce travail)
@@ -328,6 +380,6 @@ Chaque cible porte un statut **FAIT / À VÉRIFIER / HYPOTHÈSE** (§0 PLAN.md) 
 
 ---
 
-**Rédigé par** : Agent T2.4  
-**Date** : 2026-08-08  
-**Statut** : [À VÉRIFIER — recherche documentaire partielle (proxy)]
+**Rédigé par** : Agent T2.4 + enrichi par Agent T2.4bis (dépouillement Gallica BSAG)  
+**Date** : 2026-08-08 (T2.4) + 2026-08-08 (T2.4bis)  
+**Statut** : [À VÉRIFIER — recherche documentaire BSAG complétée (0 résultats) ; CAG 32 & cartulaires AD32 restent à consulter]
