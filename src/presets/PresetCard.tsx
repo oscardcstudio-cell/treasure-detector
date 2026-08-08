@@ -40,8 +40,8 @@ function formatMode(mode: string): string {
  */
 function formatCoil(coil: string): string {
   const coilLabels: Record<string, string> = {
-    stock_6_5x9: 'Disque stock 6.5"×9"',
-    sniper_4_5: 'Petit disque 4.5" (sniper)',
+    'stock_6.5x9': 'Disque stock 6.5"×9"',
+    'sniper_4.5': 'Petit disque 4.5" (sniper)',
   };
   return coilLabels[coil] || coil;
 }
