@@ -4,8 +4,10 @@ data/private/
 
 # Artefacts lourds générés par tools/prep/ — distribués en GitHub Releases,
 # jamais versionnés (un repo public qui grossit à chaque régénération devient
-# impossible à cloner).
-data/derived/
+# impossible à cloner). Exception : les petits GeoJSON (toponymes, cibles)
+# sont versionnés — dérivés de sources publiques, consommés par le scoring.
+data/derived/*
+!data/derived/*.geojson
 *.pmtiles
 *.laz
 *.copc.laz
