@@ -383,3 +383,24 @@ Chaque cible porte un statut **FAIT / À VÉRIFIER / HYPOTHÈSE** (§0 PLAN.md) 
 **Rédigé par** : Agent T2.4 + enrichi par Agent T2.4bis (dépouillement Gallica BSAG)  
 **Date** : 2026-08-08 (T2.4) + 2026-08-08 (T2.4bis)  
 **Statut** : [À VÉRIFIER — recherche documentaire BSAG complétée (0 résultats) ; CAG 32 & cartulaires AD32 restent à consulter]
+
+---
+
+## Addendum — Relevé visionneuse AD32 par Oscar (2026-08-08, captures d'écran)
+
+Première lecture des planches du cadastre napoléonien (3P, visionneuse archives32.fr). Lecture d'écriture manuscrite sur captures : **toutes les formes sont [À VÉRIFIER]** jusqu'à relecture en pleine résolution. Trois planches vues, dont l'étiquette « 3P ARMOUS ET CAU/8 ».
+
+### Deux découvertes majeures
+
+1. **« Eglize » + « au Presbitaire » + parcelles « Devant l'église »** — sur une feuille (« 2ème feuille », géomètre Daubas, 1/2500) bordée à l'ouest par la commune de **Courties** et à l'est par la **section de Rozès**. Un bâti est dessiné au lieu-dit « Eglize » avec un enclos attenant (cimetière ?), le presbytère est nommé (lecture possible « Au Presbitaire D'armous »), et des parcelles s'appellent « Devant l'église ». **C'est une localisation cadastrale directe d'une église** — reste à établir laquelle (Armous ou Cau) via le tableau d'assemblage (planche 1) et la cote exacte de la feuille. [À VÉRIFIER — capture zoom max + cote demandées à Oscar]
+2. **« au Moulin de Floures » — moulin à eau dessiné, avec canal (bief) le long de la rivière**, en limite sud vers la commune de **Tourdun** (planche /8). Moulin + bief + gué probable = **critère rang A du scoring (poids 22)**, absent de toutes nos listes jusqu'ici. [À VÉRIFIER — position à caler]
+
+### Microtoponymes relevés sur les captures (formes brutes, à confronter au lexique §2.5)
+
+- Planche /8 (bordure Tourdun) : a Laboup · a Gaillet (hameau bâti) · aux Acaubets · aux Claus · au Péchairé · las Paguères de Herré · au Bezin · a las Barles · **la Ribère** (le long de la rivière) · au Moulin de Floures · mention « Canal »
+- « 2ème feuille » (bordure Courties/Rozès) : a Lipaut · au Hauré + « Hameau du Hauré » (bâti) — *à rapprocher de « Haouré » rang 2 du relevé IGN* · au Beroulet (bâti) · las Pagueros de Naudoun — *Naudoun déjà relevé rang 2* · a Baron · A Laboup + Eglize + Devant l'église
+- « 1ère feuille » (bordure Courties/Rozès, tampon 32) : a Bourbère · au Soulan — *à rapprocher de « Soulas » ?* · a Sauret · a Baros — *à rapprocher de la section A « de Barroles » et/ou « Barrotes »* · a Itère (?)
+
+### Prochaines actions
+- Oscar : capture **zoom max** du trio Eglize/Presbitaire/Devant l'église **avec la cote de la planche affichée**, idem pour le Moulin de Floures, et une capture du **tableau d'assemblage (planche 1)** qui situe les sections les unes par rapport aux autres.
+- T3.1 : ces amers (église, moulin, hameaux bâtis en rouge) sont exactement les points de calage du géoréférencement.

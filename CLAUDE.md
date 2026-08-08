@@ -45,7 +45,8 @@ PWA **React 19 + TS strict + Vite + MapLibre GL + PMTiles + Dexie (IndexedDB)** 
 Identifiants WMTS vérifiés par `GetTile` réel — détail dans [`prototype/FINDINGS.md`](prototype/FINDINGS.md) :
 - Cassini : `BNF-IGNF_GEOGRAPHICALGRIDSYSTEMS.CASSINI` — **préfixe `BNF-IGNF_` requis**, plafonne à **z14** (prévoir `maxNativeZoom`).
 - État-major : `GEOGRAPHICALGRIDSYSTEMS.ETATMAJOR40` (z6–15) · Ortho : `ORTHOIMAGERY.ORTHOPHOTOS` (`PM_0_19`) · Plan : `GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2`.
-- **Gotcha réseau** : en conteneur, le proxy bloque `data.geopf.fr` → tâches `[MACHINE LOCALE]`. Sur Mac, `curl` échoue en IPv6 → forcer **`curl -4`** (le navigateur bascule seul).
+- **Gotcha réseau** : en conteneur, le proxy bloque `data.geopf.fr` → tâches `[MACHINE LOCALE]`. Sur Mac, `curl` échoue en IPv6 → forcer **`curl -4`** (le navigateur bascule seul). Gallica exige un **User-Agent navigateur** (403 sinon).
+- **Déploiement Railway** : `railway up` UNIQUEMENT depuis un export propre du dernier commit (`git archive HEAD | tar -x -C <tmp>` puis `railway link -p <id> -e production -s treasure-detector && railway up`) — jamais depuis le répertoire de travail : les fichiers en cours d'écriture d'agents parallèles partent dans le build et le cassent.
 
 ## Git / GitHub
 
