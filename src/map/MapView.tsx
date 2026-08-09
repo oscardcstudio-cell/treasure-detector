@@ -7,6 +7,7 @@ import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId, LIDAR_LAYERS, LIDAR_LAYER_ID
 import { initPMTilesProtocol, createPMTilesSource } from '../geo/pmtiles';
 import { ScoringLayer } from '../scoring/ScoringLayer';
 import type { ScoreCell } from '../scoring/types';
+import { TargetsLayer } from '../targets/TargetsLayer';
 
 interface MapState {
   baseLayer: string;
@@ -385,6 +386,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
             onCellSelected={setSelectedCell}
           />
         )}
+        {mapInstance && <TargetsLayer map={mapInstance} />}
       </div>
 
       {/* Panneau de contrôle — mobile-first */}

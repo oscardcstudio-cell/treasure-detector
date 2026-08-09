@@ -1,0 +1,236 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.19112, 43.55358] },
+      "properties": {
+        "name": "Lamothe — motte castrale probable",
+        "category": "major",
+        "period": "Château de terre · médiéval (XIᵉ-XIIIᵉ)",
+        "find": "Monnaies féodales, ferronnerie, plomb, mobilier médiéval.",
+        "justification": "Toponyme 'la mothe' = motte. Cœur seigneurial probable."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.18647, 43.57179] },
+      "properties": {
+        "name": "Église disparue de Cau",
+        "category": "major",
+        "period": "Édifice religieux · médiéval-moderne",
+        "find": "Plomb de vitrail, monnaies de dévotion, objets liturgiques. Sépultures possibles : ne pas creuser.",
+        "justification": "Lieux-dits 'Derrière l'Église' + 'Presbytère de Cau' encadrent le site."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.19164, 43.57283] },
+      "properties": {
+        "name": "Le Cau — ancien village",
+        "category": "major",
+        "period": "Village disparu · médiéval-moderne",
+        "find": "Monnaies, boutons, boucles, dés, ferraille domestique.",
+        "justification": "L'une des deux paroisses fondatrices de la commune."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.17489, 43.56254] },
+      "properties": {
+        "name": "Église disparue d'Armous (Cimetière d'Armous)",
+        "category": "major",
+        "period": "Édifice religieux · médiéval-moderne",
+        "find": "Plomb, monnaies de dévotion, objets liturgiques.",
+        "justification": "Le cimetière conserve l'emplacement de l'ancienne église rasée."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.19009, 43.54944] },
+      "properties": {
+        "name": "A l'Église (sud) — chapelle disparue ?",
+        "category": "major",
+        "period": "Lieu de culte disparu · médiéval",
+        "find": "Plomb, monnaies, éléments d'édifice.",
+        "justification": "Toponyme 'A l'Église' sans église actuelle → édifice disparu probable."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.2029, 43.5719] },
+      "properties": {
+        "name": "Hountan — source du Midour, sanctuaire possible",
+        "category": "major",
+        "period": "Source sacrée · antique à moderne",
+        "find": "Fibules gallo-romaines, deniers, céramique votive, ferronnerie.",
+        "justification": "Le Midour (97 km) naît ici — confirmé (SIA Midour, Larousse). 'Hount' = fontaine ; les sources de rivière recevaient des offrandes dans l'Antiquité."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.1745, 43.57655] },
+      "properties": {
+        "name": "Au Castérot — site fortifié probable",
+        "category": "forti",
+        "period": "Petit fort / castet · médiéval",
+        "find": "Ferronnerie, pointes, monnaies, plomb.",
+        "justification": "'Castérot' = petit château. Trois lieux-dits Castérot groupés ici."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.18818, 43.55774] },
+      "properties": {
+        "name": "Au Priou — prieuré probable",
+        "category": "forti",
+        "period": "Établissement religieux · médiéval",
+        "find": "Monnaies, plomb, objets religieux, ferronnerie.",
+        "justification": "'Priou' = prieuré. Contexte Case-Dieu / Saint-Mont."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.17065, 43.58031] },
+      "properties": {
+        "name": "Saint-Lannes — hagiotoponyme",
+        "category": "forti",
+        "period": "Ancien lieu de culte · médiéval",
+        "find": "Monnaies, plomb, indices d'édifice.",
+        "justification": "Nom de saint sans église actuelle → chapelle disparue possible."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.20095, 43.58878] },
+      "properties": {
+        "name": "Saint-Mesplin — hagiotoponyme",
+        "category": "forti",
+        "period": "Ancien lieu de culte · médiéval",
+        "find": "Monnaies, plomb, indices d'édifice.",
+        "justification": "Nom de saint isolé → ancienne chapelle possible."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.20128, 43.57094] },
+      "properties": {
+        "name": "Las Carretères — voie ancienne",
+        "category": "voie",
+        "period": "Chemin / voie · antique à moderne",
+        "find": "Monnaies perdues, ferrures, plombs, clous de chaussure.",
+        "justification": "'Carrère' = voie. Axe de passage ancien."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.20148, 43.5727] },
+      "properties": {
+        "name": "Les Peyrères — empierrement / voie",
+        "category": "voie",
+        "period": "Tronçon pierreux · antique ?",
+        "find": "Objets perdus le long, monnaies, possible mobilier romain.",
+        "justification": "'Peyre' = pierre, jouxte Las Carretères → chaussée empierrée possible."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.16948, 43.54173] },
+      "properties": {
+        "name": "A Carrère (sud) — chemin ancien",
+        "category": "voie",
+        "period": "Chemin · ancien",
+        "find": "Monnaies et objets perdus le long du passage.",
+        "justification": "Toponyme de voie, secteur sud de la commune."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.1842, 43.5832] },
+      "properties": {
+        "name": "Caussade — chaussée gallo-romaine",
+        "category": "voie",
+        "period": "Voie empierrée · antique",
+        "find": "Monnaies romaines de circulation, ferrures de harnachement, clous.",
+        "justification": "'Caussade' = calciata, la voie empierrée — l'étymologie la plus sûre du corpus gascon. L'Impasse de Caussade en garde le nom."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.18731, 43.55501] },
+      "properties": {
+        "name": "Le Bourdiou — métairie ancienne",
+        "category": "habitat",
+        "period": "Ferme / borde · XVIᵉ-XIXᵉ",
+        "find": "Monnaies royales (doubles tournois, liards), boutons, boucles, dés.",
+        "justification": "'Bourdiou' = métairie. Bon rapport temps/trouvailles."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.19475, 43.55865] },
+      "properties": {
+        "name": "Au Sarthou — essart médiéval",
+        "category": "habitat",
+        "period": "Défrichement · médiéval",
+        "find": "Ferraille agricole, monnaies, indices d'occupation.",
+        "justification": "'Sartou/essart' = terre défrichée au Moyen Âge."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.20341, 43.56176] },
+      "properties": {
+        "name": "Au Four — ancien four",
+        "category": "habitat",
+        "period": "Four (chaux/tuile/pain) · ancien",
+        "find": "Scories, terre cuite, ferronnerie, monnaies.",
+        "justification": "Toponyme 'Four' = installation artisanale ancienne."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.19, 43.58] },
+      "properties": {
+        "name": "Le Téoulé — tuilerie gallo-romaine ?",
+        "category": "habitat",
+        "period": "Atelier de tuiles · antique",
+        "find": "Tegulae (tuiles romaines) en surface, monnaies de bronze, scories.",
+        "justification": "'Teulèr' = tuilier (latin tegula). Position approximative (IGN) — l'épandage de tuiles se repère à l'œil au sol."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.18, 43.55] },
+      "properties": {
+        "name": "La Tuilerie (sud) — atelier de tuiles ?",
+        "category": "habitat",
+        "period": "Atelier de tuiles · antique ?",
+        "find": "Tegulae, monnaies, terre cuite.",
+        "justification": "Deuxième toponyme de tuilerie dans la commune — densité d'ateliers possible. Position approximative (IGN)."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.1876, 43.57359] },
+      "properties": {
+        "name": "Église actuelle Saint-Martin",
+        "category": "repere",
+        "period": "Repère · XIXᵉ",
+        "find": "",
+        "justification": "Bâtie avec les pierres des deux églises disparues d'Armous et Cau."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [0.17997, 43.55041] },
+      "properties": {
+        "name": "Château de Flourès",
+        "category": "repere",
+        "period": "Repère · manoir",
+        "find": "",
+        "justification": "Château voisin (limite sud-ouest). Contexte seigneurial."
+      }
+    }
+  ]
+}
