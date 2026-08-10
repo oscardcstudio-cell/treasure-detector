@@ -105,6 +105,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
   const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [topoGeoJSON, setTopoGeoJSON] = useState<any>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
 
   // Load toponymy data on mount
   useEffect(() => {
@@ -372,6 +373,8 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     onScoredCellSelected?.(selectedCell);
   }, [selectedCell, onScoredCellSelected]);
 
+  const activeLayerCount = (mapState.activeHistoricLayer ? 1 : 0) + (mapState.activeLidarLayer ? 1 : 0);
+
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Carte */}
@@ -387,150 +390,136 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
           />
         )}
         {mapInstance && <TargetsLayer map={mapInstance} />}
-      </div>
 
-      {/* Panneau de contrôle — mobile-first */}
-      <div
-        style={{
-          padding: '12px',
-          background: '#fff',
-          borderTop: '1px solid #ccc',
-          boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-          display: 'flex',
-          gap: '12px',
-          flexWrap: 'wrap',
-          fontSize: '14px',
-        }}
-      >
-        {/* Sélecteur de fond */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <label style={{ fontSize: '12px', color: '#666' }}>Fond:</label>
-          <select
-            value={mapState.baseLayer}
-            onChange={(e) => handleBaseLayerChange(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #999',
-              cursor: 'pointer',
-            }}
-          >
-            {BASEMAP_DEFAULTS.options.map((layerId) => {
-              const layer = LAYERS[layerId as keyof typeof LAYERS];
-              return (
-                <option key={layerId} value={layerId}>
-                  {layer?.label || layerId}
-                </option>
-              );
-            })}
-          </select>
+        {/* Attribution — pastille discrète sur la carte */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '10px',
+            bottom: '8px',
+            zIndex: 10,
+            padding: '3px 9px',
+            borderRadius: 'var(--radius-pill)',
+            background: 'oklch(20% 0.018 265 / 0.75)',
+            color: 'var(--td-chrome-ink-soft)',
+            fontSize: '0.62rem',
+            fontWeight: 600,
+            pointerEvents: 'none',
+          }}
+        >
+          {zoneConfig.name} · © IGN · z{Math.round(mapState.zoom)}
         </div>
 
-        {/* Sélecteur de couche historique */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <label style={{ fontSize: '12px', color: '#666' }}>Historique:</label>
-          <select
-            value={mapState.activeHistoricLayer || ''}
-            onChange={(e) => handleHistoricLayerChange((e.target.value || null) as HistoricLayerId | null)}
-            style={{
-              padding: '6px 10px',
-              fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #999',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">— Aucune —</option>
-            {(['cassini', 'etat-major', 'ortho-1950-65', 'ortho-irc'] as const).map((layerId) => {
-              const layer = LAYERS[layerId as keyof typeof LAYERS];
-              return (
-                <option key={layerId} value={layerId}>
-                  {layer?.label || layerId}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+        {/* FAB Couches + panneau flottant (mockup-terrain : la carte reste
+            visible pendant qu'on règle les faders — pas de bottom-sheet) */}
+        <div className="fg-spacer" style={{ position: 'absolute', inset: 0, zIndex: 20 }}>
+          <div className={layersOpen ? 'layers-panel is-open' : 'layers-panel'} aria-hidden={!layersOpen}>
+            <div className="layers-sheet" role="dialog" aria-label="Couches de carte">
+              <div className="layers-sheet-head">
+                <h2 className="layers-sheet-title">Couches</h2>
+                <button className="layers-sheet-close" type="button" aria-label="Fermer" onClick={() => setLayersOpen(false)}>×</button>
+              </div>
+              <div className="layers-sheet-body">
+                <div className="layers-sheet-row">
+                  <span style={{ width: '52px', flexShrink: 0 }}>Fond</span>
+                  <select
+                    value={mapState.baseLayer}
+                    onChange={(e) => handleBaseLayerChange(e.target.value)}
+                    aria-label="Fond de carte"
+                  >
+                    {BASEMAP_DEFAULTS.options.map((layerId) => {
+                      const layer = LAYERS[layerId as keyof typeof LAYERS];
+                      return (
+                        <option key={layerId} value={layerId}>
+                          {layer?.label || layerId}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
 
-        {/* Sélecteur de couche relief LiDAR */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <label style={{ fontSize: '12px', color: '#666' }}>Relief:</label>
-          <select
-            value={mapState.activeLidarLayer || ''}
-            onChange={(e) => handleLidarLayerChange((e.target.value || null) as LidarLayerId | null)}
-            style={{
-              padding: '6px 10px',
-              fontSize: '13px',
-              borderRadius: '4px',
-              border: '1px solid #999',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="">— Aucun —</option>
-            {LIDAR_LAYER_IDS.map((layerId) => (
-              <option key={layerId} value={layerId}>
-                {LIDAR_LAYERS[layerId]?.label ?? layerId}
-              </option>
-            ))}
-          </select>
-        </div>
+                <div className="layers-sheet-row">
+                  <span style={{ width: '52px', flexShrink: 0 }}>Époque</span>
+                  <select
+                    value={mapState.activeHistoricLayer || ''}
+                    onChange={(e) => handleHistoricLayerChange((e.target.value || null) as HistoricLayerId | null)}
+                    aria-label="Couche historique"
+                  >
+                    <option value="">— Aucune —</option>
+                    {(['cassini', 'etat-major', 'ortho-1950-65', 'ortho-irc'] as const).map((layerId) => {
+                      const layer = LAYERS[layerId as keyof typeof LAYERS];
+                      return (
+                        <option key={layerId} value={layerId}>
+                          {layer?.label || layerId}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                {mapState.activeHistoricLayer && (
+                  <div className="layers-sheet-row">
+                    <span style={{ width: '52px', flexShrink: 0, color: 'var(--td-chrome-ink-soft)' }}>Opacité</span>
+                    <input
+                      type="range"
+                      className="layer-slider"
+                      style={{ flex: 1, width: 'auto' }}
+                      min="0"
+                      max="100"
+                      value={Math.round(mapState.historicOpacity * 100)}
+                      onChange={(e) => handleOpacityChange(parseInt(e.target.value, 10) / 100)}
+                      aria-label="Opacité couche historique"
+                    />
+                    <span className="layer-row-val">{Math.round(mapState.historicOpacity * 100)}%</span>
+                  </div>
+                )}
 
-        {/* Curseur d'opacité relief */}
-        {mapState.activeLidarLayer && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12px', color: '#666' }}>Opacité relief:</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round(mapState.lidarOpacity * 100)}
-              onChange={(e) => handleLidarOpacityChange(parseInt(e.target.value, 10) / 100)}
-              style={{ width: '100px', cursor: 'pointer' }}
-            />
-            <span style={{ fontSize: '12px', color: '#666', width: '30px' }}>
-              {Math.round(mapState.lidarOpacity * 100)}%
-            </span>
+                <div className="layers-sheet-row">
+                  <span style={{ width: '52px', flexShrink: 0 }}>Relief</span>
+                  <select
+                    value={mapState.activeLidarLayer || ''}
+                    onChange={(e) => handleLidarLayerChange((e.target.value || null) as LidarLayerId | null)}
+                    aria-label="Couche relief LiDAR"
+                  >
+                    <option value="">— Aucun —</option>
+                    {LIDAR_LAYER_IDS.map((layerId) => (
+                      <option key={layerId} value={layerId}>
+                        {LIDAR_LAYERS[layerId]?.label ?? layerId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {mapState.activeLidarLayer && (
+                  <div className="layers-sheet-row">
+                    <span style={{ width: '52px', flexShrink: 0, color: 'var(--td-chrome-ink-soft)' }}>Opacité</span>
+                    <input
+                      type="range"
+                      className="layer-slider"
+                      style={{ flex: 1, width: 'auto' }}
+                      min="0"
+                      max="100"
+                      value={Math.round(mapState.lidarOpacity * 100)}
+                      onChange={(e) => handleLidarOpacityChange(parseInt(e.target.value, 10) / 100)}
+                      aria-label="Opacité relief"
+                    />
+                    <span className="layer-row-val">{Math.round(mapState.lidarOpacity * 100)}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
 
-        {/* Curseur d'opacité */}
-        {mapState.activeHistoricLayer && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label style={{ fontSize: '12px', color: '#666' }}>Opacité:</label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round(mapState.historicOpacity * 100)}
-              onChange={(e) => handleOpacityChange(parseInt(e.target.value, 10) / 100)}
-              style={{
-                width: '100px',
-                cursor: 'pointer',
-              }}
-            />
-            <span style={{ fontSize: '12px', color: '#666', width: '30px' }}>
-              {Math.round(mapState.historicOpacity * 100)}%
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Pied de page — attribution */}
-      <div
-        style={{
-          padding: '8px 12px',
-          background: '#f5f5f5',
-          borderTop: '1px solid #ddd',
-          fontSize: '11px',
-          color: '#666',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span>{zoneConfig.name} • © IGN</span>
-        <span style={{ fontSize: '10px' }}>Zoom: {Math.round(mapState.zoom * 10) / 10}</span>
+          <button
+            className="layers-fab"
+            type="button"
+            aria-label="Couches de carte"
+            aria-haspopup="dialog"
+            aria-expanded={layersOpen}
+            onClick={() => setLayersOpen((v) => !v)}
+          >
+            <span className="layers-fab-icon"><span></span><span></span><span></span></span>
+            {activeLayerCount > 0 && <span className="layers-fab-badge">{activeLayerCount}</span>}
+          </button>
+        </div>
       </div>
     </div>
   );

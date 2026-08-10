@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./design/clay.css";
 
 /* Le preflight Tailwind neutralise les titres : restaurer l'apparence
    sur laquelle l'app (styles inline) s'appuie déjà. */

@@ -26,8 +26,8 @@ export default defineConfig({
         name: 'treasure-detector',
         short_name: 'Treasure',
         description: 'Web app de prospection au détecteur de métaux',
-        theme_color: '#3b82f6',
-        background_color: '#ffffff',
+        theme_color: '#15151c',
+        background_color: '#f4f0e6',
         display: 'standalone',
         orientation: 'portrait-primary',
         icons: [
@@ -42,6 +42,12 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
