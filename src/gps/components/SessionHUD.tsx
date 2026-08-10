@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { circle as turfCircle } from '@turf/turf';
 import { SessionState } from '../session';
 import { GeolocationFix } from '../../platform/geolocation';
 import { CompassReading } from '../compass';
@@ -253,15 +254,17 @@ export function currentLocationToGeoJSON(fix: GeolocationFix): GeoJSON.Point {
 }
 
 /**
- * Accuracy circle: a GeoJSON Feature with a Point and accuracy metadata.
+ * Accuracy circle: a real ground-radius polygon (turf.circle) around the fix,
+ * matching the accuracy in meters. A bare Point here would not render on the
+ * 'gps-accuracy-layer' line layer (MapLibre ignores geometry/layer type mismatches
+ * without erroring) — that silently invisible dot was reported by Oscar as
+ * "GPS doesn't seem detected" on 2026-08-10.
  */
-export function accuracyCircleToGeoJSON(fix: GeolocationFix): GeoJSON.Feature {
+export function accuracyCircleToGeoJSON(fix: GeolocationFix): GeoJSON.Feature<GeoJSON.Polygon> {
+  const radiusMeters = Math.max(fix.accuracy, 1);
+  const circlePolygon = turfCircle([fix.longitude, fix.latitude], radiusMeters / 1000, { steps: 64, units: 'kilometers' });
   return {
-    type: 'Feature',
-    geometry: {
-      type: 'Point',
-      coordinates: [fix.longitude, fix.latitude],
-    },
+    ...circlePolygon,
     properties: {
       accuracy: fix.accuracy,
       timestamp: fix.timestamp,

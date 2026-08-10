@@ -1,9 +1,9 @@
 {
   "name": "Armous-et-Cau",
   "insee": "32009",
-  "center": [0.1908, 43.5742],
-  "_notes_center": "[À VÉRIFIER] source annuaire — à recaler sur l'IGN si nécessaire",
-  "defaultZoom": 14,
+  "center": [0.2008, 43.581],
+  "_notes_center": "[FAIT] maison d'Oscar (point central des recherches), géocodée via Nominatim/OSM sur le lieu-dit Barrotes à partir du lien Google Maps fourni par Oscar le 2026-08-10 — remplace l'ancien centre approximatif (annuaire, jamais vérifié). Carte au démarrage centrée ici pour concentrer le quadrillage débutant près de la maison.",
+  "defaultZoom": 15,
   "bbox": [0.0908, 43.4742, 0.2908, 43.6742],
   "_notes_bbox": "9,33 km² commune + ~2 km de marge environnement immédiat (approximatif)",
   "lidarBbox": [0.1473, 43.5427, 0.2343, 43.6057],
