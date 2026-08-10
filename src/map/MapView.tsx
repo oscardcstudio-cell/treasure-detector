@@ -229,18 +229,23 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
      * requestAnimationFrame pendant ~2 s après la création et après le 'load'
      * du style, le temps que fondu et premier affichage aboutissent.
      */
-    let pumpUntil = performance.now() + 2000;
+    const pumpStart = performance.now();
+    let pumpSettledAt: number | null = null;
     let pumpRaf: number | null = null;
+    let pumpStopped = false;
     const pump = () => {
+      if (pumpStopped) return;
       instance.triggerRepaint();
-      pumpRaf = performance.now() < pumpUntil ? requestAnimationFrame(pump) : null;
+      const now = performance.now();
+      const settled = instance.isStyleLoaded() && instance.areTilesLoaded();
+      if (settled && pumpSettledAt === null) pumpSettledAt = now;
+      if (!settled) pumpSettledAt = null;
+      // Stop : 1,5 s après stabilisation (le temps du fondu), plafond 20 s
+      const done = (pumpSettledAt !== null && now - pumpSettledAt > 1500) || now - pumpStart > 20000;
+      pumpRaf = done ? null : requestAnimationFrame(pump);
     };
     pump();
-    instance.once('load', () => {
-      instance.resize();
-      pumpUntil = performance.now() + 2000;
-      if (pumpRaf === null) pump();
-    });
+    instance.once('load', () => instance.resize());
 
     setMapInstance(instance);
     onMapReady?.(instance);
@@ -259,8 +264,8 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     instance.on('moveend', onMoveEnd);
 
     return () => {
+      pumpStopped = true;
       if (pumpRaf !== null) cancelAnimationFrame(pumpRaf);
-      pumpUntil = 0;
       resizeObserver?.disconnect();
       instance.off('moveend', onMoveEnd);
       instance.remove();
