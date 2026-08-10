@@ -183,7 +183,254 @@
     display: flex;
     flex-direction: column;
   }
-  .fg-spacer { flex: 1; }
+  /* fg-spacer héberge maintenant le FAB couches, ancré bas-droite par
+     flex (align/justify), PAS en position:absolute à offset deviné —
+     exactement la leçon documentée plus haut sur bottom-stack : un
+     chevauchement avec les boutons d'action a déjà été causé par un
+     offset en dur, le flex-stack le rend structurellement impossible. */
+  .fg-spacer {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 0 var(--space-3) var(--space-2);
+  }
+
+  /* ============================================================
+     FAB COUCHES — bouton flottant replié. Badge = nombre de couches
+     à opacité > 0. Couleur du badge : --cat-couches-m, déjà le token
+     de catégorie "couches" du système (kit-consumption, pas une
+     couleur inventée pour l'occasion).
+     ============================================================ */
+  .layers-fab {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: var(--td-chrome);
+    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong);
+  }
+  .layers-fab:active { transform: scale(0.92); }
+  .layers-fab-icon { width: 16px; height: 16px; position: relative; }
+  .layers-fab-icon span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    background: var(--td-chrome-ink);
+    transform: translate(-50%, -50%) rotate(45deg) scaleY(0.55);
+  }
+  .layers-fab-icon span:nth-child(1) { margin-top: -4px; }
+  .layers-fab-icon span:nth-child(2) { margin-top: 0; opacity: 0.75; background: var(--td-chrome-ink-soft); }
+  .layers-fab-icon span:nth-child(3) { margin-top: 4px; opacity: 0.5; background: var(--td-chrome-ink-soft); }
+  .layers-fab-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-pill);
+    background: var(--cat-couches-m);
+    color: oklch(16% 0.03 90);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--td-chrome-deep);
+    transition: transform var(--dur-press) var(--ease-out-strong);
+  }
+  .layers-fab-badge.pulse { animation: fabBadgePulse var(--dur-ui) var(--ease-out-strong); }
+  @keyframes fabBadgePulse { 30% { transform: scale(1.25); } }
+
+  /* ============================================================
+     PANNEAU COUCHES — carte flottante compacte, PAS un bottom-sheet
+     plein écran. Correction Oscar (2026-08-10, 3e passe) : le widget
+     listait les 14 couches internes du système (LAYERS de layers.ts)
+     au lieu des 4 couches historiques déjà exposées côté terrain via
+     le Rideau (Curtain.tsx) — Cassini, État-major 1820-1866, Ortho
+     1950-1965, Ortho IRC. Corrigé :
+       - liste ramenée à ces 4 couches, plus aucune couche IRC/RVB
+         millésimée ni relief LiDAR dans ce widget ;
+       - regroupement par catégorie retiré (2 groupes n'ont plus de
+         sens sur 4 items plats) ;
+       - plus de cap de hauteur ni de scroll interne : 4 lignes de
+         30px ≈ 120px de contenu, largement sous l'ancien plafond de
+         224px — le panneau se dimensionne à son contenu réel (hauteur
+         auto), pas de vide en bas ;
+       - pas de scrim opaque plein écran (aucun voile sur la carte) ;
+       - le panneau reste ancré au FAB (transform-origin bottom right,
+         popover-aware — cf. emil-design-eng), PAS en absolute-inset-0 ;
+       - largeur replafonnée à min(188px,56vw), inchangé ;
+       - chaque ligne reste une rangée grid (label | slider | %), le
+         hitbox du slider reste ≥32px (plancher tap) même si la ligne
+         ne fait visuellement que 30px ;
+       - fermeture par le bouton × ou en re-tapant le FAB, inchangé.
+     ============================================================ */
+  .layers-panel {
+    position: absolute;
+    right: 0;
+    bottom: calc(44px + var(--space-2));
+    z-index: 20;
+    width: min(188px, 56vw);
+    transform-origin: bottom right;
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+    pointer-events: none;
+    transition: opacity var(--dur-ui) ease, transform var(--dur-ui) var(--ease-out-strong);
+  }
+  .app.layers-open .layers-panel {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+    transition: opacity var(--dur-reveal) var(--ease-out-strong), transform var(--dur-reveal) var(--ease-out-strong);
+  }
+  .layers-sheet {
+    display: flex;
+    flex-direction: column;
+    background: var(--td-chrome);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
+    padding-top: 5px;
+  }
+  .layers-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px 5px;
+    border-bottom: 1px solid oklch(100% 0 0 / 0.08);
+    flex-shrink: 0;
+  }
+  .layers-sheet-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.72rem;
+    color: var(--td-chrome-ink);
+  }
+  .layers-sheet-close {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: oklch(100% 0 0 / 0.1);
+    color: var(--td-chrome-ink);
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform var(--dur-press) var(--ease-out-strong);
+  }
+  .layers-sheet-close:active { transform: scale(0.88); }
+
+  .layers-sheet-body {
+    padding: 2px 8px 4px;
+  }
+
+  /* Ligne compacte : grid à 3 colonnes (label | slider | %) au lieu
+     du double-étage précédent. `display:contents` déplie le head
+     sans wrapper visuel — label et % deviennent enfants directs de
+     la grille du `.layer-row`, positionnés par grid-column explicite
+     donc indépendants de l'ordre DOM réel (head puis slider). */
+  .layer-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 56px 24px;
+    align-items: center;
+    column-gap: 5px;
+    height: 30px;
+    border-top: 1px solid oklch(100% 0 0 / 0.08);
+  }
+  .layer-row:first-child { border-top: none; }
+  .layer-row-head { display: contents; }
+  .layer-row-label {
+    grid-column: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--td-chrome-ink);
+    transition: color var(--dur-ui) ease;
+  }
+  .layer-row-val {
+    grid-column: 3;
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    font-weight: 800;
+    color: var(--cat-couches-m);
+    text-align: right;
+    transition: color var(--dur-ui) ease;
+  }
+  .layer-row.is-off .layer-row-label { color: var(--td-chrome-ink-soft); }
+  .layer-row.is-off .layer-row-val { color: var(--td-chrome-ink-soft); }
+
+  /* Slider natif restylé — hitbox 32px de haut (plancher tap minimum
+     viable, cf. contrainte Oscar 2026-08-10) pour un rail visible de
+     4px : le slider déborde de ~1px au-dessus/en-dessous de la ligne
+     de 30px (overflow visible, imperceptible) plutôt que de gonfler
+     la ligne elle-même à 32px. */
+  .layer-slider {
+    grid-column: 2;
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 32px;
+    background: transparent;
+    margin: 0;
+    cursor: pointer;
+  }
+  .layer-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(to right, var(--cat-couches-m) var(--val, 0%), oklch(100% 0 0 / 0.14) var(--val, 0%));
+  }
+  .layer-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    margin-top: -4.5px;
+    border-radius: 50%;
+    background: var(--cat-couches-m);
+    border: 1.5px solid var(--td-chrome-ink);
+    box-shadow: 0 2px 6px oklch(0% 0 0 / 0.35), inset 0 1px 0 oklch(100% 0 0 / 0.4);
+  }
+  .layer-slider::-moz-range-track {
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: oklch(100% 0 0 / 0.14);
+  }
+  .layer-slider::-moz-range-progress {
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--cat-couches-m);
+  }
+  .layer-slider::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--cat-couches-m);
+    border: 1.5px solid var(--td-chrome-ink);
+    box-shadow: 0 2px 6px oklch(0% 0 0 / 0.35);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .layers-panel, .app.layers-open .layers-panel { transition-property: opacity; }
+    .layers-panel { transform: none; opacity: 0; }
+    .app.layers-open .layers-panel { opacity: 1; }
+  }
   .hud-top {
     flex-shrink: 0;
     padding: calc(var(--space-3) + env(safe-area-inset-top, 8px)) var(--space-3) var(--space-3);
@@ -193,7 +440,7 @@
     background: var(--td-chrome);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
-    padding: var(--space-3);
+    padding: var(--space-2) var(--space-3);
     display: flex;
     align-items: center;
     gap: var(--space-3);
@@ -252,8 +499,8 @@
     flex-shrink: 0;
   }
   .hud-btn {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: none;
     background: oklch(100% 0 0 / 0.1);
@@ -266,8 +513,8 @@
   .hud-btn:active { transform: scale(0.92); }
   .hud-btn--end { background: linear-gradient(180deg, oklch(66% 0.2 27), oklch(52% 0.2 25)); }
   .icon-pause { display: flex; gap: 3px; }
-  .icon-pause span { width: 3px; height: 12px; border-radius: 1px; background: var(--td-chrome-ink); }
-  .icon-stop { width: 11px; height: 11px; border-radius: 2px; background: var(--td-chrome-ink); }
+  .icon-pause span { width: 3px; height: 10px; border-radius: 1px; background: var(--td-chrome-ink); }
+  .icon-stop { width: 10px; height: 10px; border-radius: 2px; background: var(--td-chrome-ink); }
 
   /* ============================================================
      BOTTOM STACK — actions rapides + why-sheet empilés en flex, PAS
@@ -297,12 +544,12 @@
   }
   .qa-btn {
     flex: 1;
-    height: 64px;
+    height: 46px;
     border: none;
-    border-radius: var(--radius-xl);
+    border-radius: var(--radius-lg);
     font-family: var(--font-body);
     font-weight: 800;
-    font-size: 0.92rem;
+    font-size: 0.8rem;
     letter-spacing: 0.01em;
     text-transform: uppercase;
     cursor: pointer;
@@ -355,8 +602,8 @@
     margin-bottom: var(--space-3);
   }
   .score-badge {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
     border-radius: 42% 46% 40% 48% / 46% 40% 50% 42%;
     display: grid;
@@ -365,8 +612,8 @@
     box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
   }
   .score-badge img {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
     filter: drop-shadow(0 3px 5px oklch(0% 0 0 / 0.5));
   }
@@ -375,29 +622,29 @@
     display: block;
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 1.7rem;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--td-chrome-ink);
   }
   .score-max {
-    font-size: 1rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: var(--td-chrome-ink-soft);
   }
   .score-cell {
     display: block;
     margin-top: 2px;
-    font-size: 0.74rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--td-chrome-ink-soft);
   }
   .why-sheet-close {
-    width: 32px; height: 32px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     border: none;
     background: oklch(100% 0 0 / 0.1);
     color: var(--td-chrome-ink);
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
@@ -469,7 +716,7 @@
     border-top: 1px solid oklch(100% 0 0 / 0.08);
     box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
     display: flex;
-    padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom, 10px));
+    padding: var(--space-1) var(--space-3) calc(var(--space-1) + env(safe-area-inset-bottom, 10px));
     gap: var(--space-2);
   }
   .nav-item {
@@ -477,8 +724,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: var(--space-2) 0;
+    gap: 3px;
+    padding: 6px 0;
     border-radius: var(--radius-md);
     background: transparent;
     border: none;
@@ -492,9 +739,9 @@
     box-shadow: var(--inset-highlight);
     color: var(--td-chrome-ink);
   }
-  .nav-icon { width: 22px; height: 22px; display: grid; place-items: center; position: relative; }
+  .nav-icon { width: 20px; height: 20px; display: grid; place-items: center; position: relative; }
   .nav-icon-carte {
-    width: 14px; height: 18px;
+    width: 13px; height: 16px;
     border-radius: 50% 50% 50% 4px;
     background: var(--td-chrome-ink-soft);
     transform: rotate(-45deg);
@@ -521,226 +768,6 @@
     background: var(--td-chrome-ink-soft);
   }
   .nav-label { font-size: 0.66rem; font-weight: 700; }
-
-  /* ============================================================
-     LAYER PICKER WIDGET — drawer latéral translucide, 14 couches
-     groupées, fader opacité par couche, persistence visuelle de l'état.
-     Ouverture/fermeture via 180ms glissade + fade. Chrome cohérent.
-     ============================================================ */
-  .layer-picker-fab {
-    position: absolute;
-    bottom: 200px;
-    right: var(--space-3);
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    background: var(--td-chrome);
-    border: none;
-    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    z-index: 40;
-    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease;
-    color: var(--td-chrome-ink);
-    font-size: 1.5rem;
-    flex-shrink: 0;
-  }
-  .layer-picker-fab:active { transform: scale(0.92); }
-  .layer-picker-fab.is-open {
-    background: oklch(100% 0 0 / 0.1);
-  }
-
-  /* Drawer — glisse de droite, opaque, max-height scroll */
-  .layer-picker-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 280px;
-    background: var(--td-chrome);
-    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-    box-shadow: -4px 0 16px oklch(0% 0 0 / 0.3), inset 1px 0 0 oklch(100% 0 0 / 0.1);
-    display: flex;
-    flex-direction: column;
-    z-index: 50;
-    transform: translateX(100%);
-    opacity: 0;
-    transition: transform var(--dur-ui) var(--ease-out-strong), opacity var(--dur-ui) var(--ease-out-strong);
-    pointer-events: none;
-  }
-  .layer-picker-drawer.is-open {
-    transform: translateX(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* Backdrop — semi-opaque, tappable pour fermer */
-  .layer-picker-backdrop {
-    position: fixed;
-    inset: 0;
-    background: oklch(0% 0 0 / 0.4);
-    z-index: 45;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--dur-ui) ease;
-  }
-  .layer-picker-backdrop.is-open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* Drawer header — titre + close */
-  .layer-picker-head {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-4);
-    border-bottom: 1px solid oklch(100% 0 0 / 0.08);
-    gap: var(--space-3);
-  }
-  .layer-picker-title {
-    font-weight: 800;
-    font-size: 0.92rem;
-    color: var(--td-chrome-ink);
-  }
-  .layer-picker-close {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: none;
-    background: oklch(100% 0 0 / 0.1);
-    color: var(--td-chrome-ink);
-    font-size: 1.3rem;
-    line-height: 1;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background var(--dur-press) ease;
-  }
-  .layer-picker-close:active { transform: scale(0.92); }
-
-  /* Body — scroll content */
-  .layer-picker-body {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: var(--space-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  /* Group card */
-  .layer-group {
-    background: oklch(100% 0 0 / 0.05);
-    border-radius: var(--radius-md);
-    border: 1px solid oklch(100% 0 0 / 0.08);
-    padding: var(--space-3);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-  .layer-group-title {
-    font-weight: 800;
-    font-size: 0.78rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--td-chrome-ink-soft);
-    margin-bottom: var(--space-1);
-  }
-
-  /* Layer item */
-  .layer-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) 0;
-    border-top: 1px solid oklch(100% 0 0 / 0.05);
-  }
-  .layer-item:first-child { border-top: none; padding-top: 0; }
-
-  /* Layer vignette (mini preview) */
-  .layer-vignette {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-sm);
-    flex-shrink: 0;
-    background: linear-gradient(135deg, oklch(60% 0.06 150), oklch(50% 0.05 160));
-    border: 1px solid oklch(100% 0 0 / 0.1);
-    display: grid;
-    place-items: center;
-    font-size: 0.9rem;
-    color: var(--td-chrome-ink-soft);
-    font-weight: 700;
-  }
-
-  /* Layer info (name + fader) */
-  .layer-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  .layer-name {
-    font-size: 0.82rem;
-    font-weight: 700;
-    color: var(--td-chrome-ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Fader container & input */
-  .layer-fader-container {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-  }
-  .layer-fader {
-    flex: 1;
-    height: 4px;
-    border-radius: var(--radius-pill);
-    background: oklch(100% 0 0 / 0.12);
-    -webkit-appearance: none;
-    appearance: none;
-    cursor: pointer;
-    outline: none;
-  }
-  .layer-fader::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--cat-couches-m);
-    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
-    cursor: pointer;
-    transition: transform var(--dur-press) ease;
-  }
-  .layer-fader::-webkit-slider-thumb:active { transform: scale(1.15); }
-  .layer-fader::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--cat-couches-m);
-    border: none;
-    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
-    cursor: pointer;
-  }
-  .layer-fader::-moz-range-track { background: none; border: none; }
-  .layer-fader::-moz-range-progress { background: var(--cat-couches-m); }
-
-  .layer-opacity-value {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--td-chrome-ink-soft);
-    width: 28px;
-    text-align: right;
-    flex-shrink: 0;
-  }
 
   @media (prefers-reduced-motion: no-preference) {
     .hud-top, .quick-actions, .why-sheet {
@@ -795,7 +822,66 @@
           </div>
         </div>
 
-        <div class="fg-spacer"></div>
+        <div class="fg-spacer">
+          <!-- ============================================================
+               PANNEAU COUCHES — carte flottante ancrée au FAB, pas un
+               bottom-sheet plein écran (retour Oscar 2026-08-10 : il faut
+               voir la carte en temps réel pendant qu'on bouge les faders).
+               4 couches — les mêmes que le Rideau existant (Curtain.tsx) :
+               Cassini, État-major, Ortho 1950-1965, Ortho IRC. Liste plate,
+               pas de regroupement (inutile sur 4 items). Un seul contrôle
+               par couche : le fader d'opacité. 0% = off, pas de toggle
+               séparé (demande verbatim d'Oscar).
+               ============================================================ -->
+          <div class="layers-panel" id="layersPanel" aria-hidden="true">
+            <div class="layers-sheet" role="dialog" aria-label="Couches de carte">
+              <div class="layers-sheet-head">
+                <h2 class="layers-sheet-title">Couches</h2>
+                <button class="layers-sheet-close" type="button" aria-label="Fermer" onclick="tdToggleLayers(false)">×</button>
+              </div>
+              <div class="layers-sheet-body">
+
+                <div class="layer-row is-off">
+                  <div class="layer-row-head">
+                    <span class="layer-row-label">Cassini (XVIIIe s.)</span>
+                    <span class="layer-row-val">0%</span>
+                  </div>
+                  <input type="range" class="layer-slider" min="0" max="100" step="1" value="0" style="--val:0%" oninput="tdUpdateLayer(this)" aria-label="Opacité — Cassini (XVIIIe s.)" />
+                </div>
+
+                <div class="layer-row">
+                  <div class="layer-row-head">
+                    <span class="layer-row-label">État-major 1820–1866</span>
+                    <span class="layer-row-val">45%</span>
+                  </div>
+                  <input type="range" class="layer-slider" min="0" max="100" step="1" value="45" style="--val:45%" oninput="tdUpdateLayer(this)" aria-label="Opacité — État-major 1820–1866" />
+                </div>
+
+                <div class="layer-row is-off">
+                  <div class="layer-row-head">
+                    <span class="layer-row-label">Ortho 1950–1965</span>
+                    <span class="layer-row-val">0%</span>
+                  </div>
+                  <input type="range" class="layer-slider" min="0" max="100" step="1" value="0" style="--val:0%" oninput="tdUpdateLayer(this)" aria-label="Opacité — Ortho 1950–1965" />
+                </div>
+
+                <div class="layer-row is-off">
+                  <div class="layer-row-head">
+                    <span class="layer-row-label">Ortho IRC (canal proche-IR)</span>
+                    <span class="layer-row-val">0%</span>
+                  </div>
+                  <input type="range" class="layer-slider" min="0" max="100" step="1" value="0" style="--val:0%" oninput="tdUpdateLayer(this)" aria-label="Opacité — Ortho IRC (canal proche-IR)" />
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <button class="layers-fab" type="button" aria-label="Couches de carte" aria-haspopup="dialog" aria-expanded="false" onclick="tdToggleLayers()">
+            <span class="layers-fab-icon"><span></span><span></span><span></span></span>
+            <span class="layers-fab-badge" id="layersFabBadge">1</span>
+          </button>
+        </div>
 
         <div class="bottom-stack">
           <div class="quick-actions">
@@ -842,20 +928,6 @@
           </div>
         </div>
 
-        <!-- Layer picker FAB + drawer -->
-        <button class="layer-picker-fab" id="layerPickerFab" type="button" aria-label="Couches" aria-expanded="false">⚙</button>
-
-        <div class="layer-picker-backdrop" id="layerPickerBackdrop"></div>
-        <div class="layer-picker-drawer" id="layerPickerDrawer">
-          <div class="layer-picker-head">
-            <h2 class="layer-picker-title">Couches</h2>
-            <button class="layer-picker-close" id="layerPickerCloseBtn" type="button" aria-label="Fermer">×</button>
-          </div>
-          <div class="layer-picker-body" id="layerPickerBody">
-            <!-- Groups injected by JS -->
-          </div>
-        </div>
-
         <nav class="bottom-nav">
           <button class="nav-item is-active" type="button">
             <span class="nav-icon"><span class="nav-icon-carte"></span></span>
@@ -870,6 +942,7 @@
             <span class="nav-label">Menu</span>
           </button>
         </nav>
+
         </div>
 
       </div>
@@ -877,132 +950,37 @@
   </div>
 
   <script>
-    // Layer configuration — 14 couches, 5 groupes
-    const layerGroups = [
-      {
-        name: "Historiques",
-        layers: [
-          { id: "cassini", name: "Cassini z14", icon: "🗺️" },
-          { id: "etatmajor", name: "État-major", icon: "📋" },
-          { id: "cadastre1950", name: "Cadastre 1950", icon: "🏛️" }
-        ]
-      },
-      {
-        name: "Orthos",
-        layers: [
-          { id: "ortho1970", name: "Ortho '70", icon: "📸" },
-          { id: "ortho2000", name: "Ortho '00", icon: "📸" },
-          { id: "ortho2022", name: "Ortho '22", icon: "📸" }
-        ]
-      },
-      {
-        name: "Relief",
-        layers: [
-          { id: "lidarsvf", name: "LiDAR SVF", icon: "🏔️" },
-          { id: "lidarhill", name: "LiDAR hillshade", icon: "🏔️" }
-        ]
-      },
-      {
-        name: "Cadastre",
-        layers: [
-          { id: "cadastrePublic", name: "Parcelles public", icon: "📐" },
-          { id: "cadastrePrivate", name: "Parcelles privé", icon: "🔒" },
-          { id: "cadastreExclu", name: "Zones exclues", icon: "⛔" }
-        ]
-      },
-      {
-        name: "POI",
-        layers: [
-          { id: "topos", name: "Points topos IGN", icon: "🔸" },
-          { id: "archeo", name: "Sites archéo", icon: "⚱️" }
-        ]
-      }
-    ];
-
-    // State — persistence en sessionStorage
-    const layerState = {};
-    layerGroups.forEach(group => {
-      group.layers.forEach(layer => {
-        const stored = sessionStorage.getItem(`layer_${layer.id}`);
-        layerState[layer.id] = stored ? parseInt(stored) : 100;
-      });
-    });
-
-    // Render layer groups
-    function renderLayers() {
-      const body = document.getElementById("layerPickerBody");
-      body.innerHTML = layerGroups.map(group => `
-        <div class="layer-group">
-          <h3 class="layer-group-title">${group.name}</h3>
-          ${group.layers.map(layer => `
-            <div class="layer-item">
-              <div class="layer-vignette">${layer.icon}</div>
-              <div class="layer-info">
-                <div class="layer-name">${layer.name}</div>
-                <div class="layer-fader-container">
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value="${layerState[layer.id]}"
-                    class="layer-fader"
-                    data-layer-id="${layer.id}"
-                    aria-label="Opacité ${layer.name}"
-                  />
-                  <span class="layer-opacity-value">${layerState[layer.id]}%</span>
-                </div>
-              </div>
-            </div>
-          `).join("")}
-        </div>
-      `).join("");
-
-      // Event listeners sur les faders
-      body.querySelectorAll(".layer-fader").forEach(fader => {
-        fader.addEventListener("input", e => {
-          const layerId = e.target.dataset.layerId;
-          const value = parseInt(e.target.value);
-          layerState[layerId] = value;
-          sessionStorage.setItem(`layer_${layerId}`, value);
-          // Update affichage de l'opacité
-          e.target.parentElement.querySelector(".layer-opacity-value").textContent = `${value}%`;
-        });
-      });
+    // Widget couches — bascule replié/déployé + faders d'opacité.
+    // 4 couches — les mêmes que le Rideau existant (Curtain.tsx).
+    // tdToggleLayers() sans argument = toggle (tap sur le FAB) ;
+    // tdToggleLayers(false) = fermeture explicite (bouton ×).
+    function tdToggleLayers(open) {
+      var app = document.querySelector('.app');
+      var next = typeof open === 'boolean' ? open : !app.classList.contains('layers-open');
+      app.classList.toggle('layers-open', next);
+      document.getElementById('layersPanel').setAttribute('aria-hidden', next ? 'false' : 'true');
+      document.querySelector('.layers-fab').setAttribute('aria-expanded', next ? 'true' : 'false');
     }
 
-    // Gestion du drawer
-    const fab = document.getElementById("layerPickerFab");
-    const drawer = document.getElementById("layerPickerDrawer");
-    const backdrop = document.getElementById("layerPickerBackdrop");
-    const closeBtn = document.getElementById("layerPickerCloseBtn");
-
-    function openDrawer() {
-      drawer.classList.add("is-open");
-      backdrop.classList.add("is-open");
-      fab.classList.add("is-open");
-      fab.setAttribute("aria-expanded", "true");
+    function tdUpdateLayer(input) {
+      var val = input.value;
+      input.style.setProperty('--val', val + '%');
+      var row = input.closest('.layer-row');
+      row.classList.toggle('is-off', Number(val) === 0);
+      row.querySelector('.layer-row-val').textContent = val + '%';
+      tdRecountLayers();
     }
 
-    function closeDrawer() {
-      drawer.classList.remove("is-open");
-      backdrop.classList.remove("is-open");
-      fab.classList.remove("is-open");
-      fab.setAttribute("aria-expanded", "false");
+    function tdRecountLayers() {
+      var sliders = document.querySelectorAll('.layer-slider');
+      var count = 0;
+      sliders.forEach(function (s) { if (Number(s.value) > 0) count++; });
+      var badge = document.getElementById('layersFabBadge');
+      badge.textContent = count;
+      badge.classList.remove('pulse');
+      void badge.offsetWidth;
+      badge.classList.add('pulse');
     }
-
-    fab.addEventListener("click", () => {
-      if (drawer.classList.contains("is-open")) {
-        closeDrawer();
-      } else {
-        openDrawer();
-      }
-    });
-
-    closeBtn.addEventListener("click", closeDrawer);
-    backdrop.addEventListener("click", closeDrawer);
-
-    // Render initial
-    renderLayers();
   </script>
 
 </body>

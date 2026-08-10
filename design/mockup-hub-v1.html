@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>treasure-detector — hub v1 (claymorphism direction)</title>
+<style>
+
+  /* ============================================================
+     DESIGN TOKENS — treasure-detector, direction "hub glossy clay"
+     Ces tokens sont la base à réutiliser pour le reste de l'app.
+     Nommage sémantique : jamais --gray-700, toujours le rôle.
+     ============================================================ */
+  :root {
+    /* --- Surfaces --- */
+    --td-bg: oklch(96% 0.012 90);            /* fond d'app, neutre chaud très clair */
+    --td-bg-deep: oklch(91% 0.016 90);        /* fond des zones creusées (gauge track, etc.) */
+    --td-surface: oklch(99% 0.004 90);        /* base des cards avant teinte catégorie */
+    --td-surface-flat: oklch(100% 0 0);       /* blanc plein, glyphes internes des badges */
+
+    /* --- Texte --- */
+    --td-ink: oklch(24% 0.02 265);            /* titres, texte primaire */
+    --td-ink-soft: oklch(46% 0.018 265);      /* corps de texte secondaire */
+    --td-ink-faint: oklch(64% 0.014 265);     /* meta, captions, labels d'exemple */
+    --td-ink-on-clay: oklch(99% 0.01 90);     /* texte blanc sur fond glossy saturé */
+
+    /* --- Rampe catégorie : sortie (météo / marée / session) --- */
+    --cat-sortie-l: oklch(89% 0.09 55);
+    --cat-sortie-m: oklch(75% 0.155 46);
+    --cat-sortie-d: oklch(58% 0.16 36);
+
+    /* --- Rampe catégorie : offline (tuiles hors-ligne) --- */
+    --cat-offline-l: oklch(89% 0.075 205);
+    --cat-offline-m: oklch(73% 0.12 208);
+    --cat-offline-d: oklch(55% 0.115 222);
+
+    /* --- Rampe catégorie : stockage (jauge d'espace) --- */
+    --cat-stockage-l: oklch(88% 0.095 300);
+    --cat-stockage-m: oklch(71% 0.155 294);
+    --cat-stockage-d: oklch(54% 0.16 288);
+
+    /* --- Rampe catégorie : couches (zones signalées) --- */
+    --cat-couches-l: oklch(90% 0.105 140);
+    --cat-couches-m: oklch(75% 0.165 145);
+    --cat-couches-d: oklch(57% 0.15 150);
+
+    /* --- Rampe catégorie : compte (connexion / sync) --- */
+    --cat-compte-l: oklch(89% 0.085 20);
+    --cat-compte-m: oklch(73% 0.165 17);
+    --cat-compte-d: oklch(57% 0.175 14);
+
+    /* --- Radius scale : grands rayons, cohérents (claymorphism) --- */
+    --radius-sm: 14px;
+    --radius-md: 20px;
+    --radius-lg: 26px;
+    --radius-xl: 32px;
+    --radius-pill: 999px;
+
+    /* --- Ombres : un seul angle de lumière (haut-gauche) partout --- */
+    --shadow-ambient-sm: 0 3px 8px oklch(35% 0.03 270 / 0.10);
+    --shadow-ambient-md: 0 10px 22px oklch(35% 0.03 270 / 0.14);
+    --shadow-ambient-lg: 0 18px 38px oklch(35% 0.03 270 / 0.20);
+    --inset-highlight: inset 0 1.5px 0 oklch(100% 0 0 / 0.65), inset 0 -7px 12px oklch(0% 0 0 / 0.08);
+    --inset-highlight-strong: inset 0 2px 0 oklch(100% 0 0 / 0.85), inset 0 -9px 16px oklch(0% 0 0 / 0.12);
+    --inset-press: inset 0 3px 8px oklch(0% 0 0 / 0.18);
+
+    /* --- Typographie --- */
+    /* Pas de dépendance externe autorisée sur ce mockup : on s'appuie sur
+       les piles rondes déjà présentes côté OS (SF Rounded sur Apple,
+       Segoe UI Rounded quand dispo sur Windows). Ailleurs -> system-ui,
+       compensé par un poids fort pour garder le côté "chunky". Voir
+       rapport de livraison : premier candidat à remplacer par une vraie
+       display font ronde une fois la dépendance autorisée. */
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, sans-serif;
+    --font-body: -apple-system, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
+
+    /* --- Motion (cf. emil-design-eng : easing custom, jamais ease-in sur l'UI) --- */
+    --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-press: 150ms;
+    --dur-ui: 200ms;
+    --dur-reveal: 420ms;
+
+    /* --- Spacing --- */
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: oklch(22% 0.01 265);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+
+  /* Cadre de preview (hors périmètre du mockup réel, juste pour visualiser
+     le viewport mobile 375x812 dans un navigateur desktop). */
+  .device-frame {
+    width: 375px;
+    height: 812px;
+    border-radius: 52px;
+    background: oklch(15% 0.01 265);
+    padding: 12px;
+    box-shadow: 0 40px 80px oklch(0% 0 0 / 0.5);
+    flex-shrink: 0;
+  }
+  .device-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: var(--td-bg);
+  }
+
+  /* ============================================================
+     APP SHELL
+     ============================================================ */
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-body);
+    color: var(--td-ink);
+  }
+
+  .app-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4) 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-header {
+    padding: var(--space-2) var(--space-1) var(--space-5);
+  }
+  .app-header h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.7rem;
+    letter-spacing: -0.01em;
+    color: var(--td-ink);
+  }
+  .app-header p {
+    margin: var(--space-1) 0 0;
+    font-size: 0.85rem;
+    color: var(--td-ink-faint);
+  }
+
+  /* ============================================================
+     CTA — Démarrer la session
+     Réutilise la rampe "sortie" : démarrer une session, c'est l'action
+     concrète de la fenêtre de sortie plus bas. Même famille de teinte,
+     poids visuel plus fort (taille + gradient plus riche) plutôt
+     qu'une 6e couleur inventée pour la hiérarchie.
+     ============================================================ */
+  .cta-session {
+    width: 100%;
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-4);
+    margin-bottom: var(--space-5);
+    text-align: left;
+    cursor: pointer;
+    background: radial-gradient(120% 140% at 18% 15%, var(--cat-sortie-l), var(--cat-sortie-m) 48%, var(--cat-sortie-d) 100%);
+    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight-strong);
+    color: var(--td-ink-on-clay);
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-press) var(--ease-out-strong);
+  }
+  .cta-session:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-ambient-sm), var(--inset-press);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .cta-session:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-ambient-lg), var(--inset-highlight-strong);
+    }
+  }
+  .cta-session-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 40% 45% 42% 48% / 45% 42% 48% 42%;
+    background: radial-gradient(circle at 32% 28%, oklch(99% 0.01 90 / 0.95), oklch(99% 0.01 90 / 0.25) 60%);
+    box-shadow: var(--inset-highlight);
+    position: relative;
+  }
+  .cta-session-icon img {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 5px oklch(30% 0.03 270 / 0.4));
+  }
+  .cta-session-text { flex: 1; min-width: 0; }
+  .cta-session-text .label {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.02rem;
+    letter-spacing: -0.005em;
+  }
+  .cta-session-text .sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.76rem;
+    opacity: 0.88;
+    line-height: 1.35;
+  }
+  .cta-session-arrow {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: oklch(100% 0 0 / 0.22);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .cta-session-arrow::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--td-ink-on-clay);
+    border-top: 2px solid var(--td-ink-on-clay);
+    transform: rotate(45deg) translate(-1px, 1px);
+  }
+
+  /* ============================================================
+     GRID — deux tuiles courtes (Sortie / Offline), navigation directe
+     ============================================================ */
+  .tile-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .card {
+    background: var(--td-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-ambient-md);
+    padding: var(--space-3);
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-press) var(--ease-out-strong);
+    cursor: pointer;
+  }
+  .card:active {
+    transform: scale(0.97);
+    box-shadow: var(--shadow-ambient-sm), var(--inset-press);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-ambient-lg);
+    }
+  }
+
+  .card--tile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .card--tile .card-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: var(--td-ink);
+    margin: 0;
+  }
+  .card--tile .card-body {
+    font-size: 0.74rem;
+    color: var(--td-ink-soft);
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .card--wide {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .card--wide .card-main { flex: 1; min-width: 0; }
+  .card--wide .card-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.94rem;
+    margin: 0 0 2px;
+    color: var(--td-ink);
+  }
+  .card--wide .card-body {
+    font-size: 0.76rem;
+    color: var(--td-ink-soft);
+    line-height: 1.4;
+    margin: 0 0 var(--space-2);
+  }
+
+  /* ============================================================
+     BADGES 3D — un badge = un blob organique + un système d'ombre
+     partagé (même angle de lumière : highlight haut-gauche, ombre
+     douce bas-droite). Aucune librairie d'icônes : formes CSS pures.
+     ============================================================ */
+  .badge {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    position: relative;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
+  }
+  .badge--sortie {
+    border-radius: 42% 46% 40% 48% / 46% 40% 50% 42%;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-sortie-l), var(--cat-sortie-m) 52%, var(--cat-sortie-d) 100%);
+  }
+  .badge--offline {
+    border-radius: 34% 38% 40% 36% / 38% 34% 40% 42%;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-offline-l), var(--cat-offline-m) 52%, var(--cat-offline-d) 100%);
+  }
+  .badge--stockage {
+    border-radius: 38% 42% 36% 40% / 42% 36% 44% 38%;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-stockage-l), var(--cat-stockage-m) 52%, var(--cat-stockage-d) 100%);
+  }
+  .badge--couches {
+    border-radius: 30% 34% 32% 30% / 32% 30% 34% 32%;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-couches-l), var(--cat-couches-m) 52%, var(--cat-couches-d) 100%);
+  }
+  .badge--compte {
+    border-radius: 46% 50% 46% 50% / 48% 46% 50% 46%;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-compte-l), var(--cat-compte-m) 52%, var(--cat-compte-d) 100%);
+  }
+
+  /* Glyphes CSS remplacés par les 3D PNG Fluent Emoji (MIT). Le blob de
+     badge reste le fond (gradient rampe catégorie) ; l'image flotte
+     dessus avec sa propre ombre portée pour préserver l'effet glossy. */
+  .badge img {
+    width: 27px;
+    height: 27px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 5px oklch(30% 0.03 270 / 0.4));
+  }
+
+  /* ============================================================
+     Stockage — jauge horizontale glossy
+     ============================================================ */
+  .gauge {
+    margin-top: var(--space-2);
+  }
+  .gauge-track {
+    width: 100%;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: var(--td-bg-deep);
+    box-shadow: var(--inset-press);
+    overflow: hidden;
+  }
+  .gauge-fill {
+    height: 100%;
+    width: 46%;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(180deg, var(--cat-stockage-l), var(--cat-stockage-m));
+    box-shadow: var(--inset-highlight);
+  }
+  .gauge-label {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-2);
+    font-size: 0.74rem;
+    color: var(--td-ink-faint);
+  }
+  .gauge-label .mock-tag {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  /* ============================================================
+     Couches — toggle switch glossy
+     ============================================================ */
+  .row-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-1);
+  }
+  .row-toggle-label {
+    font-size: 0.82rem;
+    color: var(--td-ink);
+    font-weight: 600;
+  }
+  .switch {
+    width: 40px;
+    height: 23px;
+    border-radius: var(--radius-pill);
+    background: var(--td-bg-deep);
+    box-shadow: var(--inset-press);
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--dur-ui) ease;
+  }
+  .switch.is-on {
+    background: linear-gradient(180deg, var(--cat-couches-l), var(--cat-couches-m));
+    box-shadow: var(--inset-highlight);
+  }
+  .switch-knob {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 17px; height: 17px;
+    border-radius: 50%;
+    background: var(--td-surface-flat);
+    box-shadow: var(--shadow-ambient-sm);
+    transition: transform var(--dur-ui) var(--ease-out-strong);
+  }
+  .switch.is-on .switch-knob {
+    transform: translateX(17px);
+  }
+
+  /* ============================================================
+     Compte — statut + bouton pill
+     ============================================================ */
+  .account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-1);
+  }
+  .status-dot-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.78rem;
+    color: var(--td-ink-faint);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: oklch(70% 0.03 90);
+    box-shadow: 0 0 0 3px oklch(70% 0.03 90 / 0.18);
+  }
+  .btn-pill {
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 7px 14px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.74rem;
+    color: var(--td-ink-on-clay);
+    background: radial-gradient(120% 140% at 25% 20%, var(--cat-compte-l), var(--cat-compte-m) 55%, var(--cat-compte-d) 100%);
+    box-shadow: var(--shadow-ambient-sm), var(--inset-highlight);
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-press) var(--ease-out-strong);
+    flex-shrink: 0;
+  }
+  .btn-pill:active {
+    transform: scale(0.96);
+    box-shadow: var(--inset-press);
+  }
+
+  /* ============================================================
+     BOTTOM NAV
+     ============================================================ */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, oklch(100% 0.004 90 / 0.97), oklch(96% 0.014 90 / 0.97));
+    backdrop-filter: none; /* No Glass Rule : pas de flou décoratif, opacité + hairline suffisent */
+    border-top: 1px solid oklch(20% 0.02 265 / 0.09);
+    /* Plinthe légère : même highlight haut que les cards (inset-highlight).
+       Pas d'ombre inversée sous la barre — on garde le seul angle de
+       lumière du système (haut-gauche) plutôt que d'inventer une 2e
+       direction pour la nav. La correction "plat vs cards" se joue sur
+       l'item actif, traité comme une mini-card ci-dessous. */
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.9);
+    display: flex;
+    padding: var(--space-1) var(--space-3) calc(var(--space-1) + env(safe-area-inset-bottom, 10px));
+    gap: var(--space-2);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease, box-shadow var(--dur-ui) ease;
+    color: var(--td-ink-faint);
+  }
+  .nav-item:active { transform: scale(0.94); }
+  .nav-item.is-active {
+    background: linear-gradient(180deg, var(--td-surface-flat), oklch(96% 0.012 90));
+    box-shadow: var(--shadow-ambient-sm), var(--inset-highlight);
+    color: var(--td-ink);
+  }
+  .nav-icon {
+    width: 20px; height: 20px;
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .nav-icon-carte {
+    width: 14px; height: 18px;
+    border-radius: 50% 50% 50% 4px;
+    background: var(--td-ink-faint);
+    transform: rotate(-45deg);
+  }
+  .nav-item.is-active .nav-icon-carte { background: var(--cat-sortie-m); }
+  .nav-icon-carte::after {
+    content: "";
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--td-surface-flat);
+    top: 3px; left: 4px;
+  }
+  .nav-icon-trouvailles {
+    width: 15px; height: 15px;
+    background: var(--td-ink-faint);
+    transform: rotate(45deg);
+    border-radius: 3px;
+  }
+  .nav-item.is-active .nav-icon-trouvailles { background: var(--cat-couches-m); }
+  .nav-icon-menu { display: flex; gap: 3px; }
+  .nav-icon-menu span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--td-ink-faint);
+  }
+  .nav-item.is-active .nav-icon-menu span { background: var(--cat-stockage-m); }
+  .nav-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+  }
+
+  /* ============================================================
+     MOTION — entrée en cascade légère, jamais scale(0), stagger court.
+     ============================================================ */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      animation: reveal var(--dur-reveal) var(--ease-out-strong) forwards;
+    }
+    .reveal:nth-of-type(1) { animation-delay: 0ms; }
+    .reveal:nth-of-type(2) { animation-delay: 40ms; }
+    .reveal:nth-of-type(3) { animation-delay: 80ms; }
+    .reveal:nth-of-type(4) { animation-delay: 120ms; }
+    .reveal:nth-of-type(5) { animation-delay: 160ms; }
+    .reveal:nth-of-type(6) { animation-delay: 200ms; }
+    @keyframes reveal {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="device-frame">
+    <div class="device-screen">
+      <div class="app">
+        <div class="app-scroll">
+
+          <header class="app-header reveal">
+            <h1>Menu</h1>
+            <p>Session, cartes hors-ligne et compte.</p>
+          </header>
+
+          <button class="cta-session reveal" type="button">
+            <span class="cta-session-icon" aria-hidden="true"><img src="icons/fluent-3d/gps.png" alt="" /></span>
+            <span class="cta-session-text">
+              <span class="label">Démarrer la session</span>
+              <span class="sub">GPS actif, points de creusage enregistrés en continu.</span>
+            </span>
+            <span class="cta-session-arrow" aria-hidden="true"></span>
+          </button>
+
+          <div class="tile-row reveal">
+            <div class="card card--tile" role="button" tabindex="0">
+              <span class="badge badge--sortie" aria-hidden="true">
+                <img src="icons/fluent-3d/carte.png" alt="" />
+              </span>
+              <p class="card-title">Fenêtre de sortie</p>
+              <p class="card-body">Marée, vent et lumière pour la prochaine prospection.</p>
+            </div>
+            <div class="card card--tile" role="button" tabindex="0">
+              <span class="badge badge--offline" aria-hidden="true">
+                <img src="icons/fluent-3d/offline-download.png" alt="" />
+              </span>
+              <p class="card-title">Zone hors-ligne</p>
+              <p class="card-body">Télécharge les tuiles de la zone pilote avant de partir.</p>
+            </div>
+          </div>
+
+          <div class="card card--wide reveal" role="button" tabindex="0">
+            <span class="badge badge--stockage" aria-hidden="true">
+              <img src="icons/fluent-3d/stockage.png" alt="" />
+            </span>
+            <div class="card-main">
+              <p class="card-title">Stockage</p>
+              <p class="card-body">Espace utilisé par les tuiles téléchargées et les photos de trouvailles.</p>
+              <div class="gauge">
+                <div class="gauge-track">
+                  <div class="gauge-fill"></div>
+                </div>
+                <div class="gauge-label">
+                  <span>1,8 Go sur 4 Go</span>
+                  <span class="mock-tag">exemple</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--wide reveal" role="group">
+            <span class="badge badge--couches" aria-hidden="true">
+              <img src="icons/fluent-3d/couches-layers.png" alt="" />
+            </span>
+            <div class="card-main">
+              <p class="card-title">Couches</p>
+              <p class="card-body">Affiche les zones signalées par la communauté sur la carte.</p>
+              <div class="row-toggle">
+                <span class="row-toggle-label">Zones signalées</span>
+                <button class="switch is-on" type="button" role="switch" aria-checked="true" aria-label="Afficher les zones signalées">
+                  <span class="switch-knob"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card card--wide reveal" role="group">
+            <span class="badge badge--compte" aria-hidden="true">
+              <img src="icons/fluent-3d/profil-compte.png" alt="" />
+            </span>
+            <div class="card-main">
+              <p class="card-title">Compte</p>
+              <p class="card-body">Connecte-toi pour synchroniser les trouvailles entre appareils.</p>
+              <div class="account-row">
+                <span class="status-dot-row">
+                  <span class="status-dot"></span>
+                  Non connecté
+                </span>
+                <button class="btn-pill" type="button">Se connecter</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <nav class="bottom-nav">
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-carte"></span></span>
+            <span class="nav-label">Carte</span>
+          </button>
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-trouvailles"></span></span>
+            <span class="nav-label">Trouvailles</span>
+          </button>
+          <button class="nav-item is-active" type="button">
+            <span class="nav-icon"><span class="nav-icon-menu"><span></span><span></span><span></span></span></span>
+            <span class="nav-label">Menu</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

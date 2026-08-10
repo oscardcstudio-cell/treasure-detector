@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>treasure-detector — trouvailles v1 (claymorphism direction)</title>
+<style>
+
+  /* ============================================================
+     DESIGN TOKENS — repris tels quels de mockup-hub-v1.html.
+     Source de vérité : design/mockup-hub-v1.html. Ne pas diverger
+     ici ; toute évolution de token se fait dans le hub d'abord.
+     ============================================================ */
+  :root {
+    --td-bg: oklch(96% 0.012 90);
+    --td-bg-deep: oklch(91% 0.016 90);
+    --td-surface: oklch(99% 0.004 90);
+    --td-surface-flat: oklch(100% 0 0);
+
+    --td-ink: oklch(24% 0.02 265);
+    --td-ink-soft: oklch(46% 0.018 265);
+    --td-ink-faint: oklch(64% 0.014 265);
+    --td-ink-on-clay: oklch(99% 0.01 90);
+
+    --cat-sortie-l: oklch(89% 0.09 55);
+    --cat-sortie-m: oklch(75% 0.155 46);
+    --cat-sortie-d: oklch(58% 0.16 36);
+
+    --cat-offline-l: oklch(89% 0.075 205);
+    --cat-offline-m: oklch(73% 0.12 208);
+    --cat-offline-d: oklch(55% 0.115 222);
+
+    --cat-stockage-l: oklch(88% 0.095 300);
+    --cat-stockage-m: oklch(71% 0.155 294);
+    --cat-stockage-d: oklch(54% 0.16 288);
+
+    --cat-couches-l: oklch(90% 0.105 140);
+    --cat-couches-m: oklch(75% 0.165 145);
+    --cat-couches-d: oklch(57% 0.15 150);
+
+    --cat-compte-l: oklch(89% 0.085 20);
+    --cat-compte-m: oklch(73% 0.165 17);
+    --cat-compte-d: oklch(57% 0.175 14);
+
+    /* --- Rampe STATUT trouvaille (nouvelle, propre à cet écran) ---
+       Le kit hub n'a pas de vocabulaire pour "statut d'identification"
+       (ce n'est pas une catégorie de menu). Kit Consumption Rule :
+       j'invente ici, et je le flague — si adopté, ces 3 tokens migrent
+       dans le bloc :root du hub comme source de vérité partagée. */
+    --status-attente-l: oklch(90% 0.085 92);
+    --status-attente-m: oklch(76% 0.145 85);
+    --status-attente-d: oklch(58% 0.14 75);
+
+    --status-ok-l: oklch(90% 0.1 150);
+    --status-ok-m: oklch(74% 0.155 152);
+    --status-ok-d: oklch(56% 0.145 155);
+
+    --status-neutre-l: oklch(88% 0.03 60);
+    --status-neutre-m: oklch(68% 0.035 55);
+    --status-neutre-d: oklch(48% 0.03 50);
+
+    --status-rien-bg: oklch(93% 0.006 90);
+    --status-rien-fg: var(--td-ink-faint);
+
+    --radius-sm: 14px;
+    --radius-md: 20px;
+    --radius-lg: 26px;
+    --radius-xl: 32px;
+    --radius-pill: 999px;
+
+    --shadow-ambient-sm: 0 3px 8px oklch(35% 0.03 270 / 0.10);
+    --shadow-ambient-md: 0 10px 22px oklch(35% 0.03 270 / 0.14);
+    --shadow-ambient-lg: 0 18px 38px oklch(35% 0.03 270 / 0.20);
+    --inset-highlight: inset 0 1.5px 0 oklch(100% 0 0 / 0.65), inset 0 -7px 12px oklch(0% 0 0 / 0.08);
+    --inset-highlight-strong: inset 0 2px 0 oklch(100% 0 0 / 0.85), inset 0 -9px 16px oklch(0% 0 0 / 0.12);
+    --inset-press: inset 0 3px 8px oklch(0% 0 0 / 0.18);
+
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, sans-serif;
+    --font-body: -apple-system, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
+
+    --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-press: 150ms;
+    --dur-ui: 200ms;
+    --dur-reveal: 420ms;
+
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: oklch(22% 0.01 265);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+
+  .device-frame {
+    width: 375px;
+    height: 812px;
+    border-radius: 52px;
+    background: oklch(15% 0.01 265);
+    padding: 12px;
+    box-shadow: 0 40px 80px oklch(0% 0 0 / 0.5);
+    flex-shrink: 0;
+  }
+  .device-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: var(--td-bg);
+  }
+
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-body);
+    color: var(--td-ink);
+  }
+  .app-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-4) 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ============================================================
+     HEADER — icône de page (journal.png), titre, résumé de session
+     ============================================================ */
+  .app-header-icon {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-1) var(--space-5);
+  }
+  .page-badge {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 36% 42% 38% 44% / 40% 36% 44% 40%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 130% at 30% 24%, oklch(93% 0.02 300), oklch(80% 0.05 292) 55%, oklch(64% 0.07 285) 100%);
+    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
+  }
+  .page-badge img {
+    width: 25px;
+    height: 25px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 5px oklch(30% 0.03 270 / 0.4));
+  }
+  .app-header-icon h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    color: var(--td-ink);
+  }
+  .app-header-icon p {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    color: var(--td-ink-faint);
+  }
+
+  /* ============================================================
+     FILTRES — chips scrollables horizontales, même langage que
+     .btn-pill du hub (radius-pill, shadow-ambient-sm + inset-highlight)
+     ============================================================ */
+  .filter-row {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+    margin-bottom: var(--space-5);
+    scrollbar-width: none;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--radius-pill);
+    padding: 7px 12px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.72rem;
+    color: var(--td-ink-soft);
+    background: var(--td-surface);
+    box-shadow: var(--shadow-ambient-sm);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-ui) ease, background var(--dur-ui) ease, color var(--dur-ui) ease;
+  }
+  .filter-chip:active { transform: scale(0.95); box-shadow: var(--inset-press); }
+  .filter-chip.is-active {
+    /* Sélection générique : pas de rampe catégorie du hub (compte,
+       stockage...) réutilisée par commodité — aucune n'a de lien de
+       sens avec "filtre actif". Fond encre neutre, comme les autres
+       inversions de sélection du système (ex. onglet nav actif). */
+    color: var(--td-ink-on-clay);
+    background: linear-gradient(180deg, var(--td-ink-soft), var(--td-ink));
+    box-shadow: var(--shadow-ambient-sm), var(--inset-highlight);
+  }
+  .chip-count {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    opacity: 0.75;
+  }
+
+  /* ============================================================
+     LISTE — une card par DigPoint, statut dérivé du contrat réel
+     (DigPoint.outcome + présence/complétude du Find lié) :
+       outcome=rien            -> "Rien"
+       outcome=ferraille       -> "Faux positif"
+       outcome=trouvaille
+         + pas de Find, ou Find.category='indetermine' -> "À identifier"
+         + Find avec category réelle                    -> "Identifié"
+     ============================================================ */
+  .find-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .find-card {
+    background: var(--td-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-ambient-md);
+    padding: var(--space-3);
+    display: flex;
+    gap: var(--space-3);
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-press) var(--ease-out-strong);
+    cursor: pointer;
+  }
+  .find-card:active { transform: scale(0.98); box-shadow: var(--shadow-ambient-sm), var(--inset-press); }
+  @media (hover: hover) and (pointer: fine) {
+    .find-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-ambient-lg); }
+  }
+
+  .find-card-main { flex: 1; min-width: 0; }
+
+  .find-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+
+  .status-pill {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.64rem;
+    letter-spacing: 0.01em;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .status-pill::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.9;
+  }
+  .status-pill--a-identifier {
+    color: var(--status-attente-d);
+    background: linear-gradient(180deg, var(--status-attente-l), oklch(93% 0.06 90));
+  }
+  .status-pill--identifie {
+    color: var(--status-ok-d);
+    background: linear-gradient(180deg, var(--status-ok-l), oklch(92% 0.07 150));
+  }
+  .status-pill--faux-positif {
+    color: var(--status-neutre-d);
+    background: linear-gradient(180deg, var(--status-neutre-l), oklch(90% 0.02 60));
+  }
+  .status-pill--rien {
+    color: var(--status-rien-fg);
+    background: var(--status-rien-bg);
+  }
+
+  .find-date {
+    font-size: 0.72rem;
+    color: var(--td-ink-faint);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .find-coord {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.01em;
+    color: var(--td-ink-soft);
+    margin-bottom: var(--space-2);
+  }
+  .find-accuracy {
+    color: var(--td-ink-faint);
+    margin-left: 4px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .chip-row:last-child { margin-bottom: 0; }
+
+  .signal-chip {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--td-ink-soft);
+    background: var(--td-bg-deep);
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .signal-chip--repeatable {
+    color: var(--cat-couches-d);
+    background: oklch(90% 0.08 145 / 0.5);
+  }
+
+  .meta-chip {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--td-ink-on-clay);
+    background: linear-gradient(180deg, var(--cat-sortie-l), var(--cat-sortie-m));
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .meta-chip--material {
+    background: linear-gradient(180deg, var(--cat-stockage-l), var(--cat-stockage-m));
+  }
+  .meta-chip--period {
+    background: linear-gradient(180deg, var(--cat-offline-l), var(--cat-offline-m));
+  }
+
+  .find-depth {
+    font-size: 0.72rem;
+    color: var(--td-ink-faint);
+    margin-top: 4px;
+  }
+
+  /* ============================================================
+     PHOTO — vignette placeholder honnête (aucune photo réelle
+     disponible dans ce mockup). Glyphe caméra minimal, cohérent
+     avec le système de glyphes CSS déjà en place dans le hub.
+     ============================================================ */
+  .find-photo {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(160deg, oklch(78% 0.05 150), oklch(60% 0.06 160));
+    box-shadow: var(--inset-highlight);
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .photo-glyph {
+    width: 22px; height: 16px;
+    border-radius: 4px;
+    background: oklch(100% 0 0 / 0.85);
+    position: relative;
+  }
+  .photo-glyph::before {
+    content: "";
+    position: absolute;
+    top: -4px; left: 6px;
+    width: 8px; height: 5px;
+    border-radius: 2px 2px 0 0;
+    background: oklch(100% 0 0 / 0.85);
+  }
+  .photo-glyph::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 7px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: oklch(60% 0.06 160);
+  }
+  .photo-count {
+    position: absolute;
+    bottom: -4px; right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-pill);
+    background: var(--td-ink);
+    color: var(--td-surface-flat);
+    font-size: 0.6rem;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    box-shadow: var(--shadow-ambient-sm);
+  }
+
+  /* ============================================================
+     BOTTOM NAV — copie exacte du hub (finition glossy déjà corrigée)
+     ============================================================ */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, oklch(100% 0.004 90 / 0.97), oklch(96% 0.014 90 / 0.97));
+    border-top: 1px solid oklch(20% 0.02 265 / 0.09);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.9);
+    display: flex;
+    padding: var(--space-1) var(--space-3) calc(var(--space-1) + env(safe-area-inset-bottom, 10px));
+    gap: var(--space-2);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease, box-shadow var(--dur-ui) ease;
+    color: var(--td-ink-faint);
+  }
+  .nav-item:active { transform: scale(0.94); }
+  .nav-item.is-active {
+    background: linear-gradient(180deg, var(--td-surface-flat), oklch(96% 0.012 90));
+    box-shadow: var(--shadow-ambient-sm), var(--inset-highlight);
+    color: var(--td-ink);
+  }
+  .nav-icon { width: 20px; height: 20px; display: grid; place-items: center; position: relative; }
+  .nav-icon-carte {
+    width: 14px; height: 18px;
+    border-radius: 50% 50% 50% 4px;
+    background: var(--td-ink-faint);
+    transform: rotate(-45deg);
+  }
+  .nav-icon-carte::after {
+    content: "";
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--td-surface-flat);
+    top: 3px; left: 4px;
+  }
+  .nav-icon-trouvailles {
+    width: 15px; height: 15px;
+    background: var(--cat-couches-m);
+    transform: rotate(45deg);
+    border-radius: 3px;
+  }
+  .nav-icon-menu { display: flex; gap: 3px; }
+  .nav-icon-menu span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--td-ink-faint);
+  }
+  .nav-label { font-size: 0.66rem; font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      animation: reveal var(--dur-reveal) var(--ease-out-strong) forwards;
+    }
+    .reveal:nth-of-type(1) { animation-delay: 0ms; }
+    .reveal:nth-of-type(2) { animation-delay: 40ms; }
+    .find-list .find-card:nth-child(1) { animation-delay: 80ms; }
+    .find-list .find-card:nth-child(2) { animation-delay: 110ms; }
+    .find-list .find-card:nth-child(3) { animation-delay: 140ms; }
+    .find-list .find-card:nth-child(4) { animation-delay: 170ms; }
+    .find-list .find-card:nth-child(5) { animation-delay: 200ms; }
+    .find-list .find-card {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      animation-name: reveal;
+      animation-duration: var(--dur-reveal);
+      animation-timing-function: var(--ease-out-strong);
+      animation-fill-mode: forwards;
+    }
+    @keyframes reveal {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="device-frame">
+    <div class="device-screen">
+      <div class="app">
+        <div class="app-scroll">
+
+          <header class="app-header-icon reveal">
+            <span class="page-badge" aria-hidden="true">
+              <img src="icons/fluent-3d/journal.png" alt="" />
+            </span>
+            <div>
+              <h1>Trouvailles</h1>
+              <p>12 creusages cette session · 3 en attente d'identification</p>
+            </div>
+          </header>
+
+          <div class="filter-row reveal">
+            <button class="filter-chip is-active" type="button">Tout <span class="chip-count">12</span></button>
+            <button class="filter-chip" type="button">À identifier <span class="chip-count">2</span></button>
+            <button class="filter-chip" type="button">Identifié <span class="chip-count">2</span></button>
+            <button class="filter-chip" type="button">Faux positif <span class="chip-count">5</span></button>
+            <button class="filter-chip" type="button">Rien <span class="chip-count">3</span></button>
+          </div>
+
+          <div class="find-list">
+
+            <!-- outcome=trouvaille, pas encore de Find catégorisé -->
+            <article class="find-card">
+              <div class="find-card-main">
+                <div class="find-card-top">
+                  <span class="status-pill status-pill--a-identifier">À identifier</span>
+                  <span class="find-date">8 août · 14:35</span>
+                </div>
+                <div class="find-coord">43.6089°N, 0.3204°E <span class="find-accuracy">±4 m · exemple</span></div>
+                <div class="chip-row">
+                  <span class="signal-chip">Segment 9/12</span>
+                  <span class="signal-chip">Bijoux</span>
+                  <span class="signal-chip signal-chip--repeatable">Répétable</span>
+                </div>
+                <div class="find-depth">Profondeur non renseignée</div>
+              </div>
+              <span class="find-photo" aria-hidden="true">
+                <span class="photo-glyph"></span>
+                <span class="photo-count">1</span>
+              </span>
+            </article>
+
+            <!-- outcome=trouvaille, Find complet -->
+            <article class="find-card">
+              <div class="find-card-main">
+                <div class="find-card-top">
+                  <span class="status-pill status-pill--identifie">Identifié</span>
+                  <span class="find-date">8 août · 15:02</span>
+                </div>
+                <div class="find-coord">43.6091°N, 0.3198°E <span class="find-accuracy">±3 m · exemple</span></div>
+                <div class="chip-row">
+                  <span class="meta-chip">Boucle</span>
+                  <span class="meta-chip meta-chip--material">Bronze</span>
+                  <span class="meta-chip meta-chip--period">Médiéval</span>
+                </div>
+                <div class="find-depth">Profondeur 14 cm</div>
+              </div>
+              <span class="find-photo" aria-hidden="true">
+                <span class="photo-glyph"></span>
+                <span class="photo-count">2</span>
+              </span>
+            </article>
+
+            <!-- outcome=ferraille -->
+            <article class="find-card">
+              <div class="find-card-main">
+                <div class="find-card-top">
+                  <span class="status-pill status-pill--faux-positif">Faux positif</span>
+                  <span class="find-date">8 août · 15:18</span>
+                </div>
+                <div class="find-coord">43.6094°N, 0.3210°E <span class="find-accuracy">±5 m · exemple</span></div>
+                <div class="chip-row">
+                  <span class="signal-chip">Segment 3/12</span>
+                  <span class="signal-chip">Tout métal</span>
+                </div>
+                <div class="find-depth">Profondeur 6 cm</div>
+              </div>
+            </article>
+
+            <!-- outcome=rien -->
+            <article class="find-card">
+              <div class="find-card-main">
+                <div class="find-card-top">
+                  <span class="status-pill status-pill--rien">Rien</span>
+                  <span class="find-date">8 août · 15:40</span>
+                </div>
+                <div class="find-coord">43.6101°N, 0.3187°E <span class="find-accuracy">±6 m · exemple</span></div>
+                <div class="chip-row">
+                  <span class="signal-chip">Segment 2/12</span>
+                  <span class="signal-chip">Tout métal</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- outcome=trouvaille, Find complet -->
+            <article class="find-card">
+              <div class="find-card-main">
+                <div class="find-card-top">
+                  <span class="status-pill status-pill--identifie">Identifié</span>
+                  <span class="find-date">8 août · 16:05</span>
+                </div>
+                <div class="find-coord">43.6087°N, 0.3221°E <span class="find-accuracy">±3 m · exemple</span></div>
+                <div class="chip-row">
+                  <span class="meta-chip">Monnaie</span>
+                  <span class="meta-chip meta-chip--material">Argent</span>
+                  <span class="meta-chip meta-chip--period">Antique</span>
+                </div>
+                <div class="find-depth">Profondeur 9 cm</div>
+              </div>
+              <span class="find-photo" aria-hidden="true">
+                <span class="photo-glyph"></span>
+                <span class="photo-count">1</span>
+              </span>
+            </article>
+
+          </div>
+
+        </div>
+
+        <nav class="bottom-nav">
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-carte"></span></span>
+            <span class="nav-label">Carte</span>
+          </button>
+          <button class="nav-item is-active" type="button">
+            <span class="nav-icon"><span class="nav-icon-trouvailles"></span></span>
+            <span class="nav-label">Trouvailles</span>
+          </button>
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-menu"><span></span><span></span><span></span></span></span>
+            <span class="nav-label">Menu</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
