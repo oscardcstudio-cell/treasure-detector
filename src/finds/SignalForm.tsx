@@ -78,23 +78,19 @@ export const SignalForm: React.FC<SignalFormProps> = ({
   };
 
   return (
-    <div className="p-4 space-y-4 bg-white rounded-lg border border-gray-300">
-      <h3 className="text-lg font-bold">Détecteur Signal</h3>
+    <div className="card" style={{ padding: 'var(--space-4)' }}>
+      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', color: 'var(--td-ink)', marginBottom: 'var(--space-4)' }}>Détecteur Signal</h3>
 
       {/* Segment selector: 12 visual boxes */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Target ID (1-12)</label>
-        {/* 6 colonnes × 2 lignes : cases ≥ 44px, utilisables avec des gants */}
-        <div className="grid grid-cols-6 gap-2">
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Target ID (1-12)</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 'var(--space-2)' }}>
           {Array.from({ length: 12 }, (_, i) => i + 1).map((seg) => (
             <button
               key={seg}
               onClick={() => handleSegmentChange(seg)}
-              className={`p-3 min-h-11 text-sm font-bold rounded ${
-                signal.segment === seg
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`filter-chip ${signal.segment === seg ? 'is-active' : ''}`}
+              style={{ padding: 'var(--space-3)', minHeight: '44px', fontSize: '0.85rem' }}
             >
               {seg}
             </button>
@@ -103,18 +99,14 @@ export const SignalForm: React.FC<SignalFormProps> = ({
       </div>
 
       {/* Mode selector: 5 buttons */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Mode</label>
-        <div className="grid grid-cols-2 gap-2">
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Mode</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-2)' }}>
           {MODES.map((mode) => (
             <button
               key={mode}
               onClick={() => handleModeChange(mode)}
-              className={`px-3 py-2 text-sm font-semibold rounded ${
-                signal.mode === mode
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`filter-chip ${signal.mode === mode ? 'is-active' : ''}`}
             >
               {mode === 'all_metal' ? 'All-Metal' : mode.charAt(0).toUpperCase() + mode.slice(1)}
             </button>
@@ -123,35 +115,32 @@ export const SignalForm: React.FC<SignalFormProps> = ({
       </div>
 
       {/* Sensitivity: stepper 1-8 */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Sensibilité: {signal.sensitivity}</label>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Sensibilité: {signal.sensitivity}</label>
         <input
           type="range"
           min="1"
           max="8"
           value={signal.sensitivity}
           onChange={(e) => handleSensitivityChange(Number(e.target.value))}
-          className="w-full"
+          className="layer-slider"
+          style={{ width: '100%' }}
         />
-        <div className="flex justify-between text-xs text-gray-600 mt-1">
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--td-ink-faint)', marginTop: 'var(--space-2)' }}>
           <span>1 (bas)</span>
           <span>8 (haut)</span>
         </div>
       </div>
 
       {/* Depth indicator: 0/2/4/6/8 inches */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Profondeur (pouces)</label>
-        <div className="flex gap-2">
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Profondeur (pouces)</label>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
           {DEPTH_OPTIONS.map((depth) => (
             <button
               key={depth}
               onClick={() => handleDepthChange(depth)}
-              className={`px-3 py-2 text-sm font-semibold rounded ${
-                signal.depthIndicatorIn === depth
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`filter-chip ${signal.depthIndicatorIn === depth ? 'is-active' : ''}`}
             >
               {depth}″
             </button>
@@ -159,7 +148,7 @@ export const SignalForm: React.FC<SignalFormProps> = ({
           {signal.depthIndicatorIn !== undefined && (
             <button
               onClick={() => handleDepthChange(undefined)}
-              className="px-3 py-2 text-sm font-semibold bg-gray-400 text-white rounded"
+              className="filter-chip"
             >
               ✕
             </button>
@@ -168,32 +157,29 @@ export const SignalForm: React.FC<SignalFormProps> = ({
       </div>
 
       {/* Repeatable: checkbox */}
-      <div className="flex items-center gap-3">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
         <input
           type="checkbox"
           id="repeatable"
           checked={signal.repeatable}
           onChange={(e) => handleRepeatableChange(e.target.checked)}
-          className="w-4 h-4"
+          style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: 'var(--cat-offline-m)' }}
         />
-        <label htmlFor="repeatable" className="text-sm font-semibold">
+        <label htmlFor="repeatable" style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', cursor: 'pointer' }}>
           Répétable dans les deux sens
         </label>
       </div>
 
       {/* Tone: selector */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Tonalité</label>
-        <div className="flex gap-2">
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Tonalité</label>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           {TONES.map((toneOption) => (
             <button
               key={toneOption}
               onClick={() => handleToneChange(toneOption)}
-              className={`flex-1 px-3 py-2 text-sm font-semibold rounded ${
-                signal.tone === toneOption
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`filter-chip ${signal.tone === toneOption ? 'is-active' : ''}`}
+              style={{ flex: 1 }}
             >
               {toneOption.charAt(0).toUpperCase() + toneOption.slice(1)}
             </button>
@@ -201,7 +187,7 @@ export const SignalForm: React.FC<SignalFormProps> = ({
           {signal.tone !== undefined && (
             <button
               onClick={() => handleToneChange(undefined)}
-              className="px-3 py-2 text-sm font-semibold bg-gray-400 text-white rounded"
+              className="filter-chip"
             >
               ✕
             </button>
@@ -212,7 +198,8 @@ export const SignalForm: React.FC<SignalFormProps> = ({
       {onClose && (
         <button
           onClick={onClose}
-          className="w-full px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700"
+          className="filter-chip"
+          style={{ width: '100%' }}
         >
           Fermer
         </button>

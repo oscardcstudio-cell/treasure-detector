@@ -67,28 +67,23 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   const handleDugHere = () => createDigPoint('rien');
   const handleFind = () => createDigPoint('trouvaille');
 
-  const buttonClass =
-    'fixed bottom-4 left-4 right-4 px-6 py-4 text-white font-bold text-lg rounded-lg transition-all disabled:opacity-50';
-  const primaryButton = `${buttonClass} bg-blue-600 hover:bg-blue-700 active:scale-95`;
-  const secondaryButton = `${buttonClass} bg-green-600 hover:bg-green-700 active:scale-95`;
-
   return (
-    <div className="fixed bottom-4 left-4 right-4 flex gap-2">
+    <div className="quick-actions" style={{ background: 'var(--td-chrome-deep)', paddingBottom: 'max(var(--space-3), env(safe-area-inset-bottom, 0px))' }}>
       <button
         onClick={handleDugHere}
         disabled={!currentPosition || isRecording}
-        className={`flex-1 ${primaryButton}`}
+        className="qa-btn qa-btn--neutral"
         aria-label="Record dug here (no find)"
       >
-        CREUSÉ ICI
+        Creusé ici
       </button>
       <button
         onClick={handleFind}
         disabled={!currentPosition || isRecording}
-        className={`flex-1 ${secondaryButton}`}
+        className="qa-btn qa-btn--find"
         aria-label="Record find"
       >
-        TROUVAILLE
+        Trouvaille
       </button>
     </div>
   );

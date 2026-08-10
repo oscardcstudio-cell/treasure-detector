@@ -47,7 +47,7 @@ async function withStyleReady<T>(map: MapLibreMap, fn: () => T, timeoutMs = 3000
         map.off('styledata', onStyleData);
         // Démarrage très lent (vieux téléphone, base locale occupée) ou carte
         // détruite entre-temps : un nouveau clic repart sur des bases saines.
-        reject(new Error('La carte n’était pas prête — réessayer'));
+        reject(new Error('La carte n\'était pas prête — réessayer'));
       }, timeoutMs);
       const onStyleData = () => {
         if (!map.getStyle()) return;
@@ -179,73 +179,97 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
 
   return (
     <>
-      {/* Scoring button + controls */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '80px',
-          right: '12px',
-          background: '#fff',
-          padding: '12px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          zIndex: 500,
-          minWidth: '160px',
-        }}
-      >
+      {/* Scoring button — chrome pill, top-left (under Cibles legend) */}
+      {!isScored || isScored ? (
         <button
           onClick={handleScore}
           disabled={isLoading || isScored}
+          className="scoring-pill-btn"
           style={{
-            width: '100%',
-            padding: '8px',
-            background: isScored ? '#4CAF50' : '#0066cc',
-            color: '#fff',
+            position: 'absolute',
+            top: '64px',
+            left: '12px',
+            background: isScored ? 'oklch(100% 0 0 / 0.12)' : 'var(--td-chrome)',
+            color: isScored ? 'var(--td-chrome-ink-soft)' : 'var(--td-chrome-ink)',
+            padding: '10px 16px',
+            minHeight: '44px',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: 'var(--radius-pill)',
+            boxShadow: 'var(--shadow-ambient-lg), var(--inset-highlight)',
             cursor: isLoading || isScored ? 'default' : 'pointer',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            marginBottom: isScored ? '8px' : 0,
+            fontSize: '0.78rem',
+            fontWeight: '800',
+            fontFamily: 'var(--font-body)',
+            zIndex: 500,
+            transition: 'background var(--dur-ui) ease, color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out-strong)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
+          title={isScored ? (isLayerVisible ? 'Masquer la couche de score' : 'Afficher la couche de score') : 'Calculer le score de la zone'}
+          onMouseDown={(e) => !isLoading && !isScored && (e.currentTarget.style.transform = 'scale(0.96)')}
+          onMouseUp={(e) => (e.currentTarget.style.transform = '')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = '')}
         >
           {isLoading ? 'Calcul...' : isScored ? '✓ Scoré' : 'Score Zone'}
         </button>
+      ) : null}
 
-        {isScored && (
-          <button
-            onClick={handleToggleLayer}
-            style={{
-              width: '100%',
-              padding: '6px',
-              background: isLayerVisible ? '#FFA500' : '#ccc',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              marginBottom: '8px',
-            }}
-          >
-            {isLayerVisible ? 'Masquer' : 'Afficher'}
-          </button>
-        )}
+      {/* Toggle layer visibility when scored */}
+      {isScored && (
+        <button
+          onClick={handleToggleLayer}
+          style={{
+            position: 'absolute',
+            top: '116px',
+            left: '12px',
+            background: isLayerVisible ? 'var(--td-chrome)' : 'oklch(100% 0 0 / 0.12)',
+            color: isLayerVisible ? 'var(--td-chrome-ink)' : 'var(--td-chrome-ink-soft)',
+            padding: '10px 16px',
+            minHeight: '44px',
+            border: 'none',
+            borderRadius: 'var(--radius-pill)',
+            boxShadow: 'var(--shadow-ambient-lg), var(--inset-highlight)',
+            cursor: 'pointer',
+            fontSize: '0.78rem',
+            fontWeight: '800',
+            fontFamily: 'var(--font-body)',
+            zIndex: 500,
+            transition: 'background var(--dur-ui) ease, color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out-strong)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+          onMouseUp={(e) => (e.currentTarget.style.transform = '')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = '')}
+        >
+          {isLayerVisible ? 'Masquer' : 'Afficher'}
+        </button>
+      )}
 
-        {error && (
-          <div
-            style={{
-              fontSize: '11px',
-              color: '#d32f2f',
-              marginTop: '8px',
-              padding: '4px',
-              background: '#fee',
-              borderRadius: '2px',
-            }}
-          >
-            {error}
-          </div>
-        )}
-      </div>
+      {/* Error message */}
+      {error && (
+        <div
+          style={{
+            position: 'absolute',
+            top: isScored ? '168px' : '116px',
+            left: '12px',
+            fontSize: '0.78rem',
+            fontWeight: '700',
+            color: 'oklch(94% 0.05 27)',
+            padding: '8px 12px',
+            background: 'oklch(66% 0.2 27 / 0.22)',
+            border: '1px solid oklch(66% 0.2 27 / 0.45)',
+            borderRadius: 'var(--radius-sm)',
+            maxWidth: '200px',
+            zIndex: 500,
+            lineHeight: '1.4',
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       {/* WhyPanel overlay */}
       {selectedCell && (

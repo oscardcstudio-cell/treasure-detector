@@ -76,16 +76,16 @@ export const SurfaceObsForm: React.FC<SurfaceObsFormProps> = ({
   };
 
   return (
-    <div className="p-4 space-y-4 bg-white rounded-lg border border-gray-300">
-      <h3 className="text-lg font-bold">Observation de Surface</h3>
+    <div className="card" style={{ padding: 'var(--space-4)' }}>
+      <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', color: 'var(--td-ink)', marginBottom: 'var(--space-4)' }}>Observation de Surface</h3>
 
       {/* Kind */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Type d'artefact</label>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Type d'artefact</label>
         <select
           value={form.kind}
           onChange={(e) => handleChange('kind', e.target.value as SurfaceObservation['kind'])}
-          className="w-full px-3 py-2 border rounded"
+          className="clay-input"
         >
           {KINDS.map((kind) => (
             <option key={kind} value={kind}>
@@ -96,18 +96,14 @@ export const SurfaceObsForm: React.FC<SurfaceObsFormProps> = ({
       </div>
 
       {/* Density */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Densité</label>
-        <div className="grid grid-cols-2 gap-2">
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Densité</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-2)' }}>
           {DENSITIES.map((density) => (
             <button
               key={density}
               onClick={() => handleChange('density', density)}
-              className={`px-3 py-2 text-sm font-semibold rounded ${
-                form.density === density
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
+              className={`filter-chip ${form.density === density ? 'is-active' : ''}`}
             >
               {labelFor(density)}
             </button>
@@ -116,27 +112,27 @@ export const SurfaceObsForm: React.FC<SurfaceObsFormProps> = ({
       </div>
 
       {/* Collected */}
-      <div className="flex items-center gap-3">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
         <input
           type="checkbox"
           id="collected"
           checked={form.collected}
           onChange={(e) => handleChange('collected', e.target.checked)}
-          className="w-4 h-4"
+          style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: 'var(--cat-offline-m)' }}
         />
-        <label htmlFor="collected" className="text-sm font-semibold">
+        <label htmlFor="collected" style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', cursor: 'pointer' }}>
           Ramassé / prélevé
         </label>
       </div>
 
       {/* Photos display */}
       {form.photos.length > 0 && (
-        <div>
-          <label className="block text-sm font-semibold mb-2">Photos ({form.photos.length})</label>
-          <div className="space-y-2">
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Photos ({form.photos.length})</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {form.photos.map((photoKey) => (
-              <div key={photoKey} className="p-2 bg-gray-100 rounded text-sm text-gray-700">
-                {photoKey}
+              <div key={photoKey} style={{ padding: 'var(--space-2)', background: 'var(--td-bg-deep)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--td-ink-soft)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{photoKey}</span>
                 <button
                   onClick={() =>
                     handleChange(
@@ -144,7 +140,7 @@ export const SurfaceObsForm: React.FC<SurfaceObsFormProps> = ({
                       form.photos.filter((k) => k !== photoKey)
                     )
                   }
-                  className="ml-2 text-red-600 hover:underline"
+                  style={{ border: 'none', background: 'transparent', color: 'var(--td-ink-soft)', cursor: 'pointer', fontSize: '1rem' }}
                 >
                   ✕
                 </button>
@@ -155,28 +151,31 @@ export const SurfaceObsForm: React.FC<SurfaceObsFormProps> = ({
       )}
 
       {/* Note */}
-      <div>
-        <label className="block text-sm font-semibold mb-2">Notes</label>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: 'var(--td-ink)', marginBottom: 'var(--space-2)' }}>Notes</label>
         <textarea
           value={form.note}
           onChange={(e) => handleChange('note', e.target.value)}
-          className="w-full px-3 py-2 border rounded"
+          className="clay-input"
           placeholder="Observations complémentaires"
           rows={2}
+          style={{ resize: 'vertical' }}
         />
       </div>
 
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
         <button
           onClick={handleSave}
-          className="flex-1 px-4 py-2 bg-green-600 text-white font-semibold rounded hover:bg-green-700"
+          className="btn-pill btn-pill--sortie"
+          style={{ flex: 1 }}
         >
           Enregistrer
         </button>
         {onClose && (
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-600 text-white font-semibold rounded hover:bg-gray-700"
+            className="filter-chip"
+            style={{ flex: 1 }}
           >
             Fermer
           </button>

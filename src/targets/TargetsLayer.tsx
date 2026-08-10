@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Popup } from 'maplibre-gl';
 import type { Map as MapLibreMap, GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
 import { loadTargets } from './source';
+import { pickHypeLine } from '../app/hype';
 import type { TargetCategory, TargetProperties } from './types';
 
 const CATEGORY_COLORS: Record<TargetCategory, string> = {
@@ -85,10 +86,12 @@ export const TargetsLayer: React.FC<TargetsLayerProps> = ({ map, isVisible = tru
       if (!feature) return;
       const props = feature.properties as unknown as TargetProperties;
 
+      const hypeLine = pickHypeLine(props.name);
       const html = `
         <div style="font-size: 12.5px; line-height: 1.45; max-width: 230px;">
           <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; opacity: .7;">${props.period}</div>
           <strong>${props.name}</strong>
+          <div style="font-size: 11px; font-style: italic; margin-top: 4px; color: #b8860b;">« ${hypeLine} »</div>
           ${props.find ? `<br/><strong>À chercher :</strong> ${props.find}` : ''}
           <div style="font-size: 10.5px; opacity: .7; margin-top: 4px;">${props.justification}</div>
         </div>
@@ -135,48 +138,76 @@ export const TargetsLayer: React.FC<TargetsLayerProps> = ({ map, isVisible = tru
         position: 'absolute',
         top: '12px',
         left: '12px',
-        background: '#fff',
-        padding: legendOpen ? '10px 12px' : '0',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+        background: legendOpen ? 'var(--td-chrome)' : 'var(--td-chrome)',
+        padding: legendOpen ? 'var(--space-3) var(--space-4)' : '0',
+        borderRadius: legendOpen ? 'var(--radius-md)' : 'var(--radius-pill)',
+        boxShadow: 'var(--shadow-ambient-lg), var(--inset-highlight)',
         zIndex: 500,
-        fontSize: '12px',
         maxWidth: '190px',
+        transition: 'border-radius var(--dur-ui) ease, padding var(--dur-ui) ease',
       }}
     >
       <button
         onClick={() => setLegendOpen((v) => !v)}
         style={{
-          display: 'block',
           width: '100%',
           background: 'none',
           border: 'none',
-          padding: legendOpen ? '0 0 6px' : '10px 12px',
-          fontWeight: 'bold',
-          fontSize: '12px',
-          textAlign: 'left',
+          padding: legendOpen ? '0 0 var(--space-2)' : '10px 16px',
+          fontWeight: '800',
+          fontSize: '0.78rem',
+          fontFamily: 'var(--font-body)',
           cursor: 'pointer',
+          color: 'var(--td-chrome-ink)',
+          minHeight: '44px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: legendOpen ? 'flex-start' : 'center',
+          gap: 'var(--space-2)',
+          transition: 'color var(--dur-ui) ease',
         }}
       >
         Cibles ({featureCount}) {legendOpen ? '▾' : '▸'}
       </button>
-      {legendOpen &&
-        (Object.keys(CATEGORY_LABELS) as TargetCategory[]).map((cat) => (
-          <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '3px 0' }}>
-            <span
+      {legendOpen && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-2)',
+            borderTop: '1px solid oklch(100% 0 0 / 0.08)',
+            paddingTop: 'var(--space-2)',
+          }}
+        >
+          {(Object.keys(CATEGORY_LABELS) as TargetCategory[]).map((cat) => (
+            <div
+              key={cat}
               style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                background: CATEGORY_COLORS[cat],
-                border: '1px solid #fff',
-                boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
-                flex: '0 0 auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: '0.72rem',
+                fontWeight: '700',
+                color: 'var(--td-chrome-ink-soft)',
+                fontFamily: 'var(--font-body)',
               }}
-            />
-            {CATEGORY_LABELS[cat]}
-          </div>
-        ))}
+            >
+              <span
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: CATEGORY_COLORS[cat],
+                  border: '2px solid var(--td-chrome-ink)',
+                  flex: '0 0 auto',
+                  boxShadow: '0 0 0 1px oklch(0% 0 0 / 0.2)',
+                }}
+              />
+              {CATEGORY_LABELS[cat]}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

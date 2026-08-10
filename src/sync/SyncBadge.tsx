@@ -51,15 +51,20 @@ export const SyncBadge: React.FC = () => {
     return (
       <div
         style={{
-          display: 'inline-block',
-          padding: '4px 8px',
-          background: '#ccc',
-          borderRadius: '4px',
-          fontSize: '11px',
-          fontWeight: 'bold',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '6px 12px',
+          background: 'oklch(100% 0 0 / 0.14)',
+          color: 'var(--td-chrome-ink-soft)',
+          borderRadius: 'var(--radius-pill)',
+          fontSize: '0.72rem',
+          fontWeight: '800',
+          fontFamily: 'var(--font-body)',
+          minHeight: '28px',
         }}
       >
-        Initialisation...
+        Init...
       </div>
     );
   }
@@ -67,26 +72,41 @@ export const SyncBadge: React.FC = () => {
   const message = getSyncMessage(status);
   const color = getSyncColor(status);
 
-  const colorMap: Record<string, string> = {
-    green: '#2e7d32',
-    orange: '#e65100',
-    red: '#c62828',
-    grey: '#757575',
+  const styleMap: Record<string, React.CSSProperties> = {
+    green: {
+      background: 'var(--cat-couches-m)',
+      color: 'oklch(16% 0.03 90)',
+    },
+    orange: {
+      background: 'var(--cat-sortie-m)',
+      color: 'oklch(16% 0.03 90)',
+    },
+    red: {
+      background: 'linear-gradient(180deg, oklch(66% 0.2 27), oklch(52% 0.2 25))',
+      color: '#fff',
+    },
+    grey: {
+      background: 'oklch(100% 0 0 / 0.14)',
+      color: 'var(--td-chrome-ink-soft)',
+    },
   };
+
+  const style = styleMap[color] || styleMap.grey;
 
   return (
     <div
       title={`Sync status: ${message}`}
       style={{
-        display: 'inline-block',
-        padding: '4px 8px',
-        background: colorMap[color] || '#ccc',
-        color: '#fff',
-        borderRadius: '4px',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        minWidth: '80px',
-        textAlign: 'center',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '6px 12px',
+        borderRadius: 'var(--radius-pill)',
+        fontSize: '0.72rem',
+        fontWeight: '800',
+        fontFamily: 'var(--font-body)',
+        minHeight: '28px',
+        ...style,
       }}
     >
       {message}

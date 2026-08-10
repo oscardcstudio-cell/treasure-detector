@@ -11,11 +11,14 @@ export const LegalBanner: React.FC = () => {
   return (
     <div
       style={{
-        padding: '10px 12px',
-        background: '#fff8e1',
-        borderBottom: '1px solid #ffca28',
-        fontSize: '13px',
-        color: '#3e2723',
+        padding: '10px 14px',
+        background: 'var(--td-chrome)',
+        borderBottom: 'none',
+        fontSize: '0.78rem',
+        color: 'var(--td-chrome-ink-soft)',
+        fontFamily: 'var(--font-body)',
+        fontWeight: '600',
+        lineHeight: '1.4',
       }}
     >
       <p style={{ margin: 0 }}>
@@ -26,18 +29,20 @@ export const LegalBanner: React.FC = () => {
           style={{
             background: 'none',
             border: 'none',
-            color: '#5d4037',
+            color: 'var(--cat-sortie-m)',
             textDecoration: 'underline',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '0.78rem',
             padding: 0,
+            fontWeight: '700',
+            fontFamily: 'var(--font-body)',
           }}
         >
           {expanded ? 'moins' : 'en savoir plus'}
         </button>
       </p>
       {expanded && (
-        <p style={{ margin: '8px 0 0' }}>
+        <p style={{ margin: 'var(--space-2) 0 0' }}>
           Cette couche indique le type de foncier — communal, forêt gérée, privé —, pas un droit d'accès. Aucune
           source publique ne donne l'identité du propriétaire : l'app ne dit jamais à qui demander. Sur parcelle
           privée, l'accord écrit du propriétaire est obligatoire avant toute prospection. Toute découverte relevant
