@@ -25,7 +25,8 @@ var __WB_MANIFEST: any = (self as any).__WB_MANIFEST || [];
 // Noms des caches par domaine et type
 const TILE_CACHE_NAME = 'ign-tiles-v1';
 const APP_CACHE_NAME = 'app-v1';
-const MAX_TILE_CACHE_ENTRIES = 2000;
+// 6000 ≈ pack « autour de moi » (~2000 tuiles) + navigation libre, ~150-250 MB max
+const MAX_TILE_CACHE_ENTRIES = 6000;
 
 /**
  * Nettoyer le cache des tuiles si quota dépassé (LRU simple)

@@ -19,7 +19,7 @@ import { useGPSSession } from './useGPSSession';
 import { useMapIntegration } from './useMapIntegration';
 import { SyncBadge } from '../sync/SyncBadge';
 import { setupNetworkListener, drainSyncQueue } from '../sync';
-import { initPMTilesProtocol } from '../geo';
+import { initPMTilesProtocol, startAutoPrefetch, AutoPrefetchStatus } from '../geo';
 import { DownloadZone } from '../geo/DownloadZone';
 import { OutingWindow } from '../window/OutingWindow';
 import { ZonesLayer } from '../zones';
@@ -54,6 +54,9 @@ export default function AppShell() {
         console.error('Failed to initialize sync:', error);
       }
     })();
+
+    // Cartes « autour de moi » : pré-chargement hors-ligne en tâche de fond
+    startAutoPrefetch();
   }, []);
 
   // GPS session orchestration
@@ -226,6 +229,7 @@ export default function AppShell() {
               {/* Download zone */}
               <div style={{ marginBottom: '20px' }}>
                 <h3>Offline</h3>
+                <AutoPrefetchStatus />
                 <DownloadZone
                   bbox={zoneConfig.bbox as [number, number, number, number]}
                   selectedLayerIds={['plan-ign', 'ortho']}

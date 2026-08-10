@@ -17,3 +17,10 @@ export {
   createPMTilesSource,
   checkPMTilesAvailable,
 } from './pmtiles';
+export {
+  startAutoPrefetch,
+  getAutoPrefetchState,
+  subscribeAutoPrefetch,
+  discBbox,
+} from './autoPrefetch';
+export { AutoPrefetchStatus } from './AutoPrefetchStatus';
