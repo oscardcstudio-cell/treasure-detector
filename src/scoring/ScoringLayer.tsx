@@ -1,18 +1,20 @@
 /**
- * ScoringLayer — Score zone button + heatmap visualization + WhyPanel
+ * ScoringLayer — Score zone button + heatmap visualization
  *
  * Workflow:
  * 1. Click "Score zone" button
  * 2. Loads config/scoring.json + data/derived/toponymes.geojson + config/zone.json
  * 3. Calls scoreZone() to generate H3 heatmap
  * 4. Adds fill layer with opacity 0.35
- * 5. On tap: show WhyPanel with breakdown
- * 6. Toggle button to hide/show layer
+ * 5. Toggle button to hide/show layer
+ *
+ * Heatmap NON interactive (décision Engue 2026-08-10) : couche de lecture
+ * pure, aucun handler de clic sur les hexagones.
  */
 
 import React, { useState, useCallback, useRef } from 'react';
 import type { Map as MapLibreMap, GeoJSONSource } from 'maplibre-gl';
-import { scoreZone, generateHeatMap, WhyPanel, getHeatMapPaintSpec } from './index';
+import { scoreZone, generateHeatMap, getHeatMapPaintSpec } from './index';
 import type { ScoreCell } from './types';
 import type { ScoringConfig } from './types';
 
@@ -21,7 +23,6 @@ interface ScoringLayerProps {
   zoneConfig: any; // zone.json
   scoringConfig: ScoringConfig;
   topoGeoJSON: any; // toponymes.geojson
-  onCellSelected?: (cell: ScoreCell | undefined) => void;
 }
 
 /**
@@ -68,17 +69,12 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
   zoneConfig,
   scoringConfig,
   topoGeoJSON,
-  onCellSelected,
 }) => {
   const [isScored, setIsScored] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [isLayerVisible, setIsLayerVisible] = useState(true);
   const scoredCellsRef = useRef<ScoreCell[]>([]);
-  // Les handlers carte ne doivent être posés qu'une fois, même si le scoring
-  // est relancé (withStyleReady peut ré-exécuter le bloc de mutations).
-  const handlersAttachedRef = useRef(false);
 
   const handleScore = useCallback(async () => {
     if (!map) {
@@ -132,27 +128,9 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
           });
         }
 
-        if (!handlersAttachedRef.current) {
-          handlersAttachedRef.current = true;
-
-          map.on('click', 'heatmap-fill', (e) => {
-            if (e.features && e.features[0]) {
-              const h3 = e.features[0].properties?.h3;
-              if (h3) {
-                const cell = scoredCellsRef.current.find((c) => c.h3 === h3);
-                setSelectedCell(cell);
-                onCellSelected?.(cell);
-              }
-            }
-          });
-
-          map.on('mouseenter', 'heatmap-fill', () => {
-            map.getCanvas().style.cursor = 'pointer';
-          });
-          map.on('mouseleave', 'heatmap-fill', () => {
-            map.getCanvas().style.cursor = '';
-          });
-        }
+        // Hexagones volontairement NON interactifs (décision Engue 2026-08-10) :
+        // la heatmap est une couche de lecture pure. Le clic ouvrait le
+        // recommandeur de presets (« labourage frais »), retiré.
       });
 
       setIsScored(true);
@@ -271,16 +249,6 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
         </div>
       )}
 
-      {/* WhyPanel overlay */}
-      {selectedCell && (
-        <WhyPanel
-          cell={selectedCell}
-          onClose={() => {
-            setSelectedCell(undefined);
-            onCellSelected?.(undefined);
-          }}
-        />
-      )}
     </>
   );
 };

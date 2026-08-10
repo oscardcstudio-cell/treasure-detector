@@ -25,9 +25,7 @@ import { DownloadZone } from '../geo/DownloadZone';
 import { OutingWindow } from '../window/OutingWindow';
 import { ZonesLayer } from '../zones';
 import { FoncierLayer, LegalBanner } from '../foncier';
-import { PresetOverlay } from '../presets/PresetOverlay';
 import { AuthGate } from '../auth/AuthGate';
-import type { ScoreCell } from '../scoring/types';
 
 type ViewMode = 'standard' | 'curtain';
 type TabMode = 'map' | 'finds' | 'menu';
@@ -40,7 +38,6 @@ export default function AppShell() {
   const [mapRef, setMapRef] = useState<MapLibreMap | null>(null);
   const [showZonesLayer, setShowZonesLayer] = useState(true);
   const [showFoncierLayer, setShowFoncierLayer] = useState(false);
-  const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
 
   // Initialize sync on mount (network listener)
   useEffect(() => {
@@ -214,7 +211,7 @@ export default function AppShell() {
       <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {tabMode === 'map' ? (
           <>
-            {viewMode === 'standard' && <MapView onMapReady={setMapRef} onScoredCellSelected={setSelectedCell} />}
+            {viewMode === 'standard' && <MapView onMapReady={setMapRef} />}
             {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
             {showZonesLayer && mapRef && <ZonesLayer map={mapRef} isVisible={showZonesLayer} />}
             {showFoncierLayer && mapRef && <FoncierLayer map={mapRef} isVisible={showFoncierLayer} />}
@@ -381,14 +378,6 @@ export default function AppShell() {
         </button>
       </nav>
 
-      {/* Preset overlay (shows when a cell is selected) */}
-      <PresetOverlay
-        activeCell={selectedCell}
-        resolveContext={{
-          soilCondition: undefined,
-        }}
-        onClose={() => setSelectedCell(undefined)}
-      />
     </div>
   );
 }

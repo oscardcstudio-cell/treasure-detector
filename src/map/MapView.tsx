@@ -6,7 +6,6 @@ import scoringConfig from '../../config/scoring.json';
 import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId, LIDAR_LAYERS, LIDAR_LAYER_IDS, LidarLayerId } from './layers';
 import { initPMTilesProtocol, createPMTilesSource } from '../geo/pmtiles';
 import { ScoringLayer } from '../scoring/ScoringLayer';
-import type { ScoreCell } from '../scoring/types';
 import { TargetsLayer } from '../targets/TargetsLayer';
 
 interface MapState {
@@ -25,7 +24,7 @@ const STORAGE_KEY = 'treasure-detector:map-state';
 
 export interface MapViewProps {
   onMapReady?: (map: MapLibreMap) => void;
-  onScoredCellSelected?: (cell: ScoreCell | undefined) => void;
+  // Heatmap non interactive (décision 2026-08-10) : plus de sélection de cellule
 }
 
 /**
@@ -94,7 +93,7 @@ function syncRasterLayer(
   );
 }
 
-export default function MapView({ onMapReady, onScoredCellSelected }: MapViewProps = {}) {
+export default function MapView({ onMapReady }: MapViewProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   /**
@@ -103,7 +102,6 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
    * pas de rendu — ils recevaient alors `null`, ou pire une carte périmée.
    */
   const [mapInstance, setMapInstance] = useState<MapLibreMap | null>(null);
-  const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [topoGeoJSON, setTopoGeoJSON] = useState<any>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   /**
@@ -450,11 +448,6 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     setMapState((prev) => ({ ...prev, lidarOpacity: clamped }));
   };
 
-  // Notify parent of cell selection
-  useEffect(() => {
-    onScoredCellSelected?.(selectedCell);
-  }, [selectedCell, onScoredCellSelected]);
-
   const activeLayerCount = (mapState.activeHistoricLayer ? 1 : 0) + (mapState.activeLidarLayer ? 1 : 0);
 
   return (
@@ -468,7 +461,6 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
             zoneConfig={zoneConfig}
             scoringConfig={scoringConfig as any}
             topoGeoJSON={topoGeoJSON}
-            onCellSelected={setSelectedCell}
           />
         )}
         {mapInstance && <TargetsLayer map={mapInstance} />}
