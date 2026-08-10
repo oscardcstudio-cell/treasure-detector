@@ -221,6 +221,27 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
       resizeObserver.observe(mapContainer.current);
     }
 
+    /**
+     * Filet anti « premier rendu avalé » : en build de prod (constaté après la
+     * refonte claymorphism), les frames auto-programmées de MapLibre ne partent
+     * pas au démarrage — carte noire (ou figée en plein fondu de tuiles) jusqu'au
+     * premier geste, après quoi tout est normal. On pompe donc des frames via
+     * requestAnimationFrame pendant ~2 s après la création et après le 'load'
+     * du style, le temps que fondu et premier affichage aboutissent.
+     */
+    let pumpUntil = performance.now() + 2000;
+    let pumpRaf: number | null = null;
+    const pump = () => {
+      instance.triggerRepaint();
+      pumpRaf = performance.now() < pumpUntil ? requestAnimationFrame(pump) : null;
+    };
+    pump();
+    instance.once('load', () => {
+      instance.resize();
+      pumpUntil = performance.now() + 2000;
+      if (pumpRaf === null) pump();
+    });
+
     setMapInstance(instance);
     onMapReady?.(instance);
 
@@ -238,6 +259,8 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     instance.on('moveend', onMoveEnd);
 
     return () => {
+      if (pumpRaf !== null) cancelAnimationFrame(pumpRaf);
+      pumpUntil = 0;
       resizeObserver?.disconnect();
       instance.off('moveend', onMoveEnd);
       instance.remove();
