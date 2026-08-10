@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Map as MapLibreMap, NavigationControl, StyleSpecification } from 'maplibre-gl';
+import { Map as MapLibreMap, NavigationControl, GeolocateControl, StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import zoneConfig from '../../config/zone.json';
 import scoringConfig from '../../config/scoring.json';
@@ -118,8 +118,16 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   // Load toponymy data on mount
   useEffect(() => {
     fetch('/data/derived/toponymes.geojson')
-      .then((res) => res.json())
-      .then(setTopoGeoJSON)
+      .then((res) => {
+        // Fallback SPA : fichier absent → index.html (200, HTML) au lieu de 404
+        const ct = res.headers?.get?.('content-type') ?? '';
+        if (!res.ok || ct.includes('text/html')) {
+          console.info('Toponymes non disponibles — scoring sans cette source.');
+          return null;
+        }
+        return res.json();
+      })
+      .then((data) => { if (data) setTopoGeoJSON(data); })
       .catch((err) => console.error('Failed to load toponymes:', err));
   }, []);
 
@@ -213,6 +221,17 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     map.current = instance;
 
     instance.addControl(new NavigationControl(), 'top-right');
+    // Point bleu + bouton « recentrer sur ma position » (comme Google Maps).
+    // trackUserLocation : re-tape → suit la position en continu.
+    instance.addControl(
+      new GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserLocation: true,
+        showAccuracyCircle: true,
+      }),
+      'top-right'
+    );
 
     /**
      * La carte peut naître dans un conteneur pas encore mesuré (0×0 pendant le

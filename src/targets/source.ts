@@ -21,6 +21,13 @@ export async function loadTargets(): Promise<TargetsGeoJSON> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
+    // Fallback SPA : fichier absent → index.html (200, HTML) au lieu de 404
+    const contentType = response.headers?.get?.('content-type') ?? '';
+    if (contentType.includes('text/html')) {
+      console.info('Cibles archéologiques non disponibles (fichier absent).');
+      return { type: 'FeatureCollection', features: [] };
+    }
+
     const data = await response.json();
 
     if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {

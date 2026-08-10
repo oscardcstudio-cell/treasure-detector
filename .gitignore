@@ -44,4 +44,10 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
-public/data/
+# Données app : les petits GeoJSON sont versionnés (requis en prod — le
+# fallback SPA renvoie du HTML à leur place sinon) ; les artefacts lourds
+# (*.pmtiles) restent hors git → GitHub Releases.
+public/data/*
+!public/data/derived/
+public/data/derived/*
+!public/data/derived/*.geojson

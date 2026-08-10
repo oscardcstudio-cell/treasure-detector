@@ -1,0 +1,426 @@
+{
+  "type": "FeatureCollection",
+  "name": "Toponymie — Armous-et-Cau (INSEE 32009)",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Caussade",
+        "sourceForm": "Caussade (Impasse de Caussade)",
+        "source": "BAN (Base d'Adresses Nationale), IGN",
+        "rank": 1,
+        "interpretation": "Voie antique empierrée (calciata). Étymologie confirmée. Scorer poids 24.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18361,
+          43.58099
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Hountan",
+        "sourceForm": "Hountan (lieu-dit)",
+        "source": "Nominatim/OSM, IGN, Cassini",
+        "rank": 1,
+        "interpretation": "Source / fontaine (hont = source en gascon). Zone source du Midour confirmée. Sanctuaire de source probable. Scorer poids 25.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.20287,
+          43.57191
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Lamothe",
+        "sourceForm": "Lamothe (motte castrale probable)",
+        "source": "FINDINGS.md (spike carto, OSM Overpass)",
+        "rank": 1,
+        "interpretation": "Motte castrale probable, médiéval XI–XIII siècles. Mobilier attendu : monnaies féodales, ferronnerie, plomb. Dépôt en surface.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.19112,
+          43.55358
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Église disparue d'Armous",
+        "sourceForm": "Église d'Armous (site du bourg médiéval)",
+        "source": "Cadastre napoléonien section C1/C2, FINDINGS.md, documentation §2.2 du plan",
+        "rank": 1,
+        "interpretation": "Noyau villageois disparu d'Armous, XI siècle (abbaye bénédictine Saint-Mont). Pierres réutilisées au XIXe pour l'église Saint-Martin actuelle. SITE PRIORITAIRE (cible n°1 du projet). Scorer poids 30. — position OSM du spike, à caler sur le cadastre 1813 (section C)",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.17489,
+          43.56254
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Église disparue de Cau",
+        "sourceForm": "Église de Cau (ancien noyau villageois)",
+        "source": "FINDINGS.md (OSM), cadastre napoléonien (section indéterminée)",
+        "rank": 1,
+        "interpretation": "Noyau villageois disparu de Cau, médiéval-moderne. Fusion avec Armous 1790-94. PROBLÈME : aucune section cadastrale nommée « de Cau ». À croiser limite paroissiale/communale. Scorer poids 30 si localisation confirmée.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18647,
+          43.57179
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Le Cau — ancien village",
+        "sourceForm": "Le Cau (habitat ancien)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Ancien noyau villageois. Attention : cau = creux/abri en gascon (piège Polge). Peut être topographique ou anthroponyme. Croiser cadastre.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.19164,
+          43.57283
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Au Castérot",
+        "sourceForm": "Au Castérot (fort probable)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 1,
+        "interpretation": "Fort ou enceinte fortifiée probable (castèra/castérot = enceinte, tertre fortifié). Médiéval. Mobilier : ferronnerie, pointes, monnaies, plomb.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.1745,
+          43.57655
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Au Priou",
+        "sourceForm": "Au Priou (prieuré probable)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 1,
+        "interpretation": "Prieuré probable (priou < prior). Dépendance monastique possible (La Case-Dieu ?). Médiéval. Mobilier : monnaies, plomb, objets religieux.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18818,
+          43.55774
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Saint-Lanne",
+        "sourceForm": "Saint-Lanne (vocable hagionymique)",
+        "source": "FINDINGS.md (OSM), IGN",
+        "rank": 1,
+        "interpretation": "Vocable hagionymique hors-bourg (chapelle ou église disparue probable). Culte médiéval rare. À croiser avec Polge Répertoire des patronages (AD32). Scorer poids 18 si confirmé.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.17065,
+          43.58031
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Saint-Mesplin",
+        "sourceForm": "Saint-Mesplin (vocable hagionymique)",
+        "source": "FINDINGS.md (OSM), IGN",
+        "rank": 1,
+        "interpretation": "Vocable hagionymique hors-bourg (chapelle ou église disparue probable). Culte médiéval rare et localisé. À croiser Polge AD32. Scorer poids 18 si confirmé.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.20095,
+          43.58878
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Las Carretères",
+        "sourceForm": "Las Carretères (voie ancienne)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Voie ancienne ou chemin romain (carrère = voie). Antique à moderne. Mobilier : monnaies perdues, ferrures, plombs, clous.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.20128,
+          43.57094
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Les Peyrères",
+        "sourceForm": "Les Peyrères (empierrement, voie)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Empierrement / voie ancienne (peyra/peyre = pierre). Possible chemin antique calciata. À distinguer de Caussade.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.20148,
+          43.5727
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "À Carrère (sud)",
+        "sourceForm": "À Carrère — chemin",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Chemin ancien (carrère). Perte d'objets probable le long du tracé.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.16948,
+          43.54173
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Le Bourdiou",
+        "sourceForm": "Le Bourdiou (métairie)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Métairie ou ferme (borde). XVI–XIX siècles. Mobilier : monnaies royales, boutons, boucles, dés.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18731,
+          43.55501
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Au Sarthou",
+        "sourceForm": "Au Sarthou (essart)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Essart (défrichement médiéval, défriché d'origine). Mobilier : ferraille agricole, monnaies.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.19475,
+          43.55865
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Au Four",
+        "sourceForm": "Au Four (ancien four)",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 2,
+        "interpretation": "Four ancien (four à pain ou four de potier ?). Mobilier : scories, terre cuite, ferronnerie.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.20341,
+          43.56176
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "À l'Église (sud)",
+        "sourceForm": "À l'Église — chapelle possible",
+        "source": "FINDINGS.md (OSM)",
+        "rank": 1,
+        "interpretation": "Chapelle ou édifice religieux disparu (sud de la commune). Médiéval probable. Mobilier : plomb, monnaies, éléments d'édifice.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.19009,
+          43.54944
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Église Saint-Martin (repère)",
+        "sourceForm": "Église Saint-Martin (église actuelle, XIX siècle)",
+        "source": "FINDINGS.md (OSM), cadastre",
+        "rank": 0,
+        "interpretation": "Église actuelle (1840s env.), bâtie avec les pierres des deux églises disparues d'Armous et de Cau. Repère cartographique, pas signal archéologique.",
+        "status": "[FAIT]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.1876,
+          43.57359
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bilas",
+        "sourceForm": "À Bilas",
+        "source": "Nominatim/OSM",
+        "rank": 2,
+        "interpretation": "Possible domaine gallo-romain (villa > bilas ?) ou anthroponyme. Suffixe -as douteux. À croiser cadastre napoléonien.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18801,
+          43.57435
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Caubet",
+        "sourceForm": "À Caubet",
+        "source": "Nominatim/OSM",
+        "rank": 2,
+        "interpretation": "Lien possible avec village disparu Cau (cau + diminutif -bet ?). Ou simple anthroponyme. À clarifier via cadastre.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18143,
+          43.56472
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Cambos",
+        "sourceForm": "À Cambos",
+        "source": "Nominatim/OSM",
+        "rank": 2,
+        "interpretation": "Possible de campos (champs). Domaine gallo-romain potentiel ou métairie. À vérifier cadastre.",
+        "status": "[HYPOTHÈSE]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.17436,
+          43.57969
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Rozès",
+        "sourceForm": "Rozès (section B du cadastre napoléonien)",
+        "source": "Cadastre napoléonien (section B « de Rozes »), Nominatim/OSM",
+        "rank": 2,
+        "interpretation": "Section cadastrale B (1819). Possible topographique (rosaies ?) ou anthroponyme. Probable métairie.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.18668,
+          43.56853
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Mauran",
+        "sourceForm": "Mauran (section D du cadastre napoléonien)",
+        "source": "Cadastre napoléonien (section D « de Mauran »), Nominatim/OSM",
+        "rank": 2,
+        "interpretation": "Section cadastrale D. Suffixe -an potentiel (domaine romain *Maurianum* ?). À confirmer Polge.",
+        "status": "[À VÉRIFIER]"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          0.16765,
+          43.57539
+        ]
+      }
+    }
+  ]
+}

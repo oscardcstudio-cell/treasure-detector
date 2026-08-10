@@ -21,6 +21,13 @@ export async function loadFoncier(): Promise<FoncierGeoJSON> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
+    // Fallback SPA : fichier absent → index.html (200, HTML) au lieu de 404
+    const contentType = response.headers?.get?.('content-type') ?? '';
+    if (contentType.includes('text/html')) {
+      console.info('Foncier non disponible (fichier absent). Lancer tools/prep/foncier.py');
+      return { type: 'FeatureCollection', features: [] };
+    }
+
     const data = await response.json();
     if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
       throw new Error('Structure GeoJSON invalide : FeatureCollection attendue');
@@ -44,6 +51,13 @@ export async function loadVoies(): Promise<VoiesGeoJSON> {
     }
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Fallback SPA : fichier absent → index.html (200, HTML) au lieu de 404
+    const contentType = response.headers?.get?.('content-type') ?? '';
+    if (contentType.includes('text/html')) {
+      console.info('Voies non disponibles (fichier absent). Lancer tools/prep/foncier.py');
+      return { type: 'FeatureCollection', features: [] };
     }
 
     const data = await response.json();
