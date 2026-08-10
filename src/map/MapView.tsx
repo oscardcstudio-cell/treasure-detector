@@ -106,6 +106,14 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
   const [topoGeoJSON, setTopoGeoJSON] = useState<any>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  /**
+   * Vrai après le premier 'idle' de la carte (base affichée). Les couches
+   * restaurées de localStorage (historique, relief) ne se posent qu'à ce
+   * moment-là : les ajouter PENDANT l'init gèle le premier rendu en build de
+   * prod — carte noire/fondu figé jusqu'au premier geste (constaté 2026-08-10,
+   * reproduit : relief actif au boot = noir ; relief posé après coup = OK).
+   */
+  const [mapSettled, setMapSettled] = useState(false);
 
   // Load toponymy data on mount
   useEffect(() => {
@@ -245,7 +253,23 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
       pumpRaf = done ? null : requestAnimationFrame(pump);
     };
     pump();
-    instance.once('load', () => instance.resize());
+
+    /**
+     * « Micro-geste » : en build, le premier calcul de couverture de tuiles
+     * n'aboutit pas toujours (carte noire jusqu'au premier zoom/drag, qui
+     * répare tout). jumpTo sur place déclenche movestart→moveend et force le
+     * recalcul complet — l'équivalent programmatique du geste utilisateur.
+     */
+    const nudge = () => {
+      instance.resize();
+      instance.jumpTo({ center: instance.getCenter(), zoom: instance.getZoom() });
+    };
+    instance.once('load', nudge);
+    const nudgeTimer = window.setTimeout(nudge, 1200);
+
+    // Débloque la pose des couches restaurées (voir mapSettled)
+    instance.once('idle', () => setMapSettled(true));
+    const settleTimer = window.setTimeout(() => setMapSettled(true), 4000);
 
     setMapInstance(instance);
     onMapReady?.(instance);
@@ -266,6 +290,8 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     return () => {
       pumpStopped = true;
       if (pumpRaf !== null) cancelAnimationFrame(pumpRaf);
+      window.clearTimeout(settleTimer);
+      window.clearTimeout(nudgeTimer);
       resizeObserver?.disconnect();
       instance.off('moveend', onMoveEnd);
       instance.remove();
@@ -299,7 +325,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   // Couche historique en surimpression — ajout/retrait sans recréer la carte
   useEffect(() => {
     const instance = mapInstance;
-    if (!instance) return;
+    if (!instance || !mapSettled) return;
 
     const historicId = mapState.activeHistoricLayer;
     const apply = () => {
@@ -323,7 +349,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     whenStyleReady(instance, apply);
     // l'opacité a son propre effet : la ré-appliquer ici recréerait la couche
     // à chaque cran du curseur (deps volontairement sans historicOpacity).
-  }, [mapInstance, mapState.activeHistoricLayer]);
+  }, [mapInstance, mapSettled, mapState.activeHistoricLayer]);
 
   // Mettre à jour l'opacité de la couche historique
   useEffect(() => {
@@ -335,7 +361,7 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
   // Couche relief LiDAR (PMTiles distant) — même mécanique que l'historique
   useEffect(() => {
     const instance = mapInstance;
-    if (!instance) return;
+    if (!instance || !mapSettled) return;
 
     const lidarId = mapState.activeLidarLayer;
     const apply = () => {
