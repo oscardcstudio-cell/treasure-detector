@@ -23,6 +23,7 @@ import { initPMTilesProtocol } from '../geo';
 import { DownloadZone } from '../geo/DownloadZone';
 import { OutingWindow } from '../window/OutingWindow';
 import { ZonesLayer } from '../zones';
+import { FoncierLayer, LegalBanner } from '../foncier';
 import { PresetOverlay } from '../presets/PresetOverlay';
 import { AuthGate } from '../auth/AuthGate';
 import type { ScoreCell } from '../scoring/types';
@@ -37,6 +38,7 @@ export default function AppShell() {
   const [tabMode, setTabMode] = useState<TabMode>('map');
   const [mapRef, setMapRef] = useState<MapLibreMap | null>(null);
   const [showZonesLayer, setShowZonesLayer] = useState(true);
+  const [showFoncierLayer, setShowFoncierLayer] = useState(false);
   const [selectedCell, setSelectedCell] = useState<ScoreCell | undefined>();
 
   // Initialize sync on mount (network listener)
@@ -161,6 +163,9 @@ export default function AppShell() {
         <SyncBadge />
       </div>
 
+      {/* Bandeau légal — visible tant que la couche foncier est active */}
+      {showFoncierLayer && <LegalBanner />}
+
       {/* Session HUD (if session active) */}
       {gpsSession.sessionId && (
         <div style={{ padding: '12px', background: '#e3f2fd', borderBottom: '1px solid #90caf9' }}>
@@ -194,6 +199,8 @@ export default function AppShell() {
             {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
             {/* Zones layer toggle (only in map view) */}
             {showZonesLayer && mapRef && <ZonesLayer map={mapRef} isVisible={showZonesLayer} />}
+            {/* Foncier layer toggle (only in map view) */}
+            {showFoncierLayer && mapRef && <FoncierLayer map={mapRef} isVisible={showFoncierLayer} />}
           </>
         ) : tabMode === 'finds' ? (
           <FindsList digs={[]} finds={new Map()} onDelete={async () => {}} />
@@ -239,6 +246,14 @@ export default function AppShell() {
                     onChange={(e) => setShowZonesLayer(e.target.checked)}
                   />
                   <span>Zones signalées</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={showFoncierLayer}
+                    onChange={(e) => setShowFoncierLayer(e.target.checked)}
+                  />
+                  <span>Foncier (public / privé / exclu)</span>
                 </label>
               </div>
 

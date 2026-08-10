@@ -210,9 +210,21 @@ pmtiles show data/derived/hillshade.pmtiles
 | Phase | Étape | Tâche |
 |---|---|---|
 | **T3.2** | 1 | Calage cadastre napoléonien (GCP manuels, QGIS) |
-| **T3.2** | 2 | Vectorisation BD TOPO (chemins, cours d'eau) en GeoJSON |
+| **T3.2** | 2 | ~~Vectorisation BD TOPO (chemins, cours d'eau) en GeoJSON~~ — fait pour les chemins par `foncier.py` (2026-08-10), cours d'eau restant |
 | **T3.3** | 1 | Consommation PMTiles dans MapLibre GL JS |
 | **T1.2** | 1 | Intégration Supabase pour persistance des résultats |
+
+## foncier.py (2026-08-10) — classification foncier public/privé/exclu
+
+Voir `src/foncier/README.md` pour le détail (sources, classification, intégration UI).
+
+```bash
+python3 foncier.py
+```
+
+Résultat : `data/derived/foncier.geojson` (parcelles classifiées) + `data/derived/voies.geojson` (tronçons de route/chemin).
+
+**Gotcha vérifié** : le BBOX du WFS `data.geopf.fr` attend l'ordre **lat,lon** (axe ISO de l'EPSG:4326) — l'ordre lon,lat (habituel en GeoJSON) renvoie 0 résultat **sans erreur**, silencieux et donc dangereux. Vérifié empiriquement le 2026-08-10 sur `BDTOPO_V3:foret_publique`.
 
 ---
 
