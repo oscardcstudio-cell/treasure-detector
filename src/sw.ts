@@ -161,8 +161,16 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     return;
   }
 
-  // PMTiles locales ou distantes : cache-first aussi
-  if (request.url.includes('.pmtiles') || url.pathname.includes('/data/derived/')) {
+  // PMTiles : lectures par plages d'octets (Range). Le Cache API refuse les
+  // réponses 206 (cache.put jette) : les faire passer en direct, sans cache —
+  // sinon le SW casse toutes les couches relief.
+  if (request.url.includes('.pmtiles')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Autres données dérivées (GeoJSON) : cache-first
+  if (url.pathname.includes('/data/derived/')) {
     event.respondWith(cacheTile(request));
     return;
   }

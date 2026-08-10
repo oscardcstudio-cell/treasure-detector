@@ -208,8 +208,14 @@ export interface LidarLayerDef {
   attribution: string;
 }
 
-const LIDAR_RELEASE_BASE =
-  'https://github.com/oscardcstudio-cell/treasure-detector/releases/download/lidar-v1';
+/**
+ * Même origine que l'app (servis par server.js sur Railway, express.static
+ * gère les requêtes Range). Les GitHub Releases sont exclus : leurs assets
+ * refusent le CORS navigateur — vérifié 2026-08-10, fetch bloqué.
+ * En local : fichiers dans public/data/derived/ (gitignorés), copiés dans
+ * dist/ au build. Source de vérité : data/derived/ + release lidar-v1.
+ */
+const LIDAR_RELEASE_BASE = '/data/derived';
 
 /**
  * Couverture : `lidarBbox` de config/zone.json (commune + 2 km), z11–17.

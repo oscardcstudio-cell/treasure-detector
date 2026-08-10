@@ -171,6 +171,22 @@ export default function AppShell() {
       {/* Bandeau légal — visible tant que la couche foncier est active */}
       {showFoncierLayer && <LegalBanner />}
 
+      {/* Alerte GPS (permission refusée / signal perdu) pendant une session */}
+      {gpsSession.sessionId && gpsSession.gpsError && (
+        <div
+          style={{
+            padding: '10px 12px',
+            background: '#fbe9e7',
+            borderBottom: '1px solid #ff8a65',
+            color: '#bf360c',
+            fontSize: '14px',
+            fontWeight: 'bold',
+          }}
+        >
+          {gpsSession.gpsError}
+        </div>
+      )}
+
       {/* Session HUD (if session active) */}
       {gpsSession.sessionId && (
         <div style={{ padding: '12px', background: '#e3f2fd', borderBottom: '1px solid #90caf9' }}>

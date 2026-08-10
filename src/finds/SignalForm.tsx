@@ -84,12 +84,13 @@ export const SignalForm: React.FC<SignalFormProps> = ({
       {/* Segment selector: 12 visual boxes */}
       <div>
         <label className="block text-sm font-semibold mb-2">Target ID (1-12)</label>
-        <div className="grid grid-cols-12 gap-1">
+        {/* 6 colonnes × 2 lignes : cases ≥ 44px, utilisables avec des gants */}
+        <div className="grid grid-cols-6 gap-2">
           {Array.from({ length: 12 }, (_, i) => i + 1).map((seg) => (
             <button
               key={seg}
               onClick={() => handleSegmentChange(seg)}
-              className={`p-2 text-xs font-bold rounded ${
+              className={`p-3 min-h-11 text-sm font-bold rounded ${
                 signal.segment === seg
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-800 hover:bg-gray-300'

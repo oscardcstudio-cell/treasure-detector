@@ -1,8 +1,20 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@import "tailwindcss";
+
+/* Le preflight Tailwind neutralise les titres : restaurer l'apparence
+   sur laquelle l'app (styles inline) s'appuie déjà. */
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.5em 0;
 }
+h3 {
+  font-size: 1.17rem;
+  font-weight: 700;
+  margin: 0.5em 0;
+}
+
+/* Pas de reset universel ici : le preflight Tailwind s'en charge (en layer).
+   Un `* { padding: 0 }` non-layered écraserait toutes les utilities. */
 
 html, body {
   width: 100%;

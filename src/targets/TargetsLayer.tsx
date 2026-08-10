@@ -35,6 +35,8 @@ interface TargetsLayerProps {
 
 export const TargetsLayer: React.FC<TargetsLayerProps> = ({ map, isVisible = true }) => {
   const [featureCount, setFeatureCount] = useState(0);
+  // Légende repliée par défaut sur téléphone : dépliée elle mange 1/3 de la carte
+  const [legendOpen, setLegendOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 600);
   const popupRef = useRef<Popup | null>(null);
 
   useEffect(() => {
@@ -134,33 +136,47 @@ export const TargetsLayer: React.FC<TargetsLayerProps> = ({ map, isVisible = tru
         top: '12px',
         left: '12px',
         background: '#fff',
-        padding: '10px 12px',
-        borderRadius: '4px',
+        padding: legendOpen ? '10px 12px' : '0',
+        borderRadius: '8px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
         zIndex: 500,
-        fontSize: '11px',
+        fontSize: '12px',
         maxWidth: '190px',
       }}
     >
-      <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
-        Cibles ({featureCount})
-      </div>
-      {(Object.keys(CATEGORY_LABELS) as TargetCategory[]).map((cat) => (
-        <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '3px 0' }}>
-          <span
-            style={{
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              background: CATEGORY_COLORS[cat],
-              border: '1px solid #fff',
-              boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
-              flex: '0 0 auto',
-            }}
-          />
-          {CATEGORY_LABELS[cat]}
-        </div>
-      ))}
+      <button
+        onClick={() => setLegendOpen((v) => !v)}
+        style={{
+          display: 'block',
+          width: '100%',
+          background: 'none',
+          border: 'none',
+          padding: legendOpen ? '0 0 6px' : '10px 12px',
+          fontWeight: 'bold',
+          fontSize: '12px',
+          textAlign: 'left',
+          cursor: 'pointer',
+        }}
+      >
+        Cibles ({featureCount}) {legendOpen ? '▾' : '▸'}
+      </button>
+      {legendOpen &&
+        (Object.keys(CATEGORY_LABELS) as TargetCategory[]).map((cat) => (
+          <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '3px 0' }}>
+            <span
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                background: CATEGORY_COLORS[cat],
+                border: '1px solid #fff',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.2)',
+                flex: '0 0 auto',
+              }}
+            />
+            {CATEGORY_LABELS[cat]}
+          </div>
+        ))}
     </div>
   );
 };

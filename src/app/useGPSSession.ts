@@ -22,6 +22,8 @@ export interface GPSSessionData {
   sessionLabel: string | null;
   isRecording: boolean;
   trackPointCount: number;
+  /** Message d'erreur GPS lisible (permission refusée, signal perdu), null si OK */
+  gpsError: string | null;
 }
 
 export function useGPSSession(options: useGPSSessionOptions = {}) {
@@ -42,6 +44,7 @@ export function useGPSSession(options: useGPSSessionOptions = {}) {
     sessionLabel: null,
     isRecording: false,
     trackPointCount: 0,
+    gpsError: null,
   });
 
   // Start a new session
@@ -108,10 +111,18 @@ export function useGPSSession(options: useGPSSessionOptions = {}) {
                 heading: fix.heading,
               },
               trackPointCount: trackPointCountRef.current,
+              gpsError: null,
             }));
           },
           (error) => {
             console.warn('Geolocation error:', error);
+            // Sans ce message, une permission refusée = session qui n'enregistre
+            // rien en silence, découvert une heure plus tard sur le terrain
+            const message =
+              error?.code === 1
+                ? 'GPS refusé — autorise la localisation pour ce site dans les réglages du navigateur.'
+                : 'GPS en recherche… signal perdu ou indisponible.';
+            setSessionData((prev) => ({ ...prev, gpsError: message }));
           },
           {
             enableHighAccuracy: true,

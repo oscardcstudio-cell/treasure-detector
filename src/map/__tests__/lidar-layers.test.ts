@@ -21,11 +21,12 @@ describe('LIDAR_LAYERS registry', () => {
       ['lidar-hillshade', 'lidar-lrm', 'lidar-openness', 'lidar-svf']);
   });
 
-  it('chaque couche a un id cohérent et une URL de release https', () => {
+  it('chaque couche a un id cohérent et une URL pmtiles same-origin', () => {
+    // Same-origin obligatoire : les assets GitHub Releases refusent le CORS
+    // navigateur (vérifié 2026-08-10) — une URL github.com ici = couche morte.
     for (const [key, def] of Object.entries(LIDAR_LAYERS)) {
       expect(def.id).toBe(key);
-      expect(def.pmtilesUrl).toMatch(
-        /^https:\/\/github\.com\/.+\/releases\/download\/.+\.pmtiles$/);
+      expect(def.pmtilesUrl).toMatch(/^\/data\/derived\/.+\.pmtiles$/);
       expect(def.attribution).toContain('IGN');
     }
   });
