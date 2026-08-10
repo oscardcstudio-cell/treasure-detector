@@ -57,4 +57,5 @@ Identifiants WMTS vérifiés par `GetTile` réel — détail dans [`prototype/FI
 ## Travail multi-agents (voir §8 du plan)
 
 Contrat d'abord (T0.2 = barrière) · **1 agent = 1 fichier** (ownership exclusif par lot) · review = N lentilles · integration-check final (T4.2, droit de veto).
+**Aucune commande git dans les prompts de sous-agents** (un agent a déjà `git restore` le travail non commité de tous les autres) — l'orchestrateur commit après chaque livraison.
 Modèles : `sonnet` pour code/recherche · `haiku` pour lookup pur · `opus` seulement sur T0.2. **Toujours passer `model` explicitement** à chaque `Agent` — sans ça il hérite du parent (opus), invisible sauf sur la facture.
