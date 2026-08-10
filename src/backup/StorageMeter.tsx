@@ -105,86 +105,39 @@ export const StorageMeter: React.FC<StorageMeterProps> = ({ onExportComplete, on
   };
 
   const quotaBar = quota ? (
-    <div style={{ marginBottom: '12px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '12px',
-          marginBottom: '4px',
-        }}
-      >
-        <span>Stockage</span>
-        <span>
-          {formatStorageSize(quota.usage)} / {formatStorageSize(quota.quota)}
-        </span>
-      </div>
-      <div
-        style={{
-          height: '8px',
-          backgroundColor: '#e0e0e0',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
-      >
+    <div className="gauge">
+      <div className="gauge-track">
         <div
-          style={{
-            height: '100%',
-            width: `${Math.min(quota.percentage, 100)}%`,
-            backgroundColor: quota.percentage > 80 ? '#ff5252' : quota.percentage > 50 ? '#ffb300' : '#4caf50',
-            transition: 'width 0.3s ease',
-          }}
+          className={`gauge-fill ${quota.percentage > 80 ? 'gauge-fill--danger' : quota.percentage > 50 ? 'gauge-fill--warn' : ''}`}
+          style={{ width: `${Math.min(quota.percentage, 100)}%` }}
         />
       </div>
-      <div
-        style={{
-          fontSize: '11px',
-          color: '#666',
-          marginTop: '4px',
-        }}
-      >
-        {quota.percentage.toFixed(0)}% utilisé
-        {quota.percentage > 80 && (
-          <span style={{ color: '#ff5252', fontWeight: 'bold' }}> — QUOTA BAS</span>
-        )}
+      <div className="gauge-label">
+        <span>{formatStorageSize(quota.usage)} sur {formatStorageSize(quota.quota)}</span>
+        <span>{quota.percentage.toFixed(0)}%</span>
       </div>
     </div>
   ) : null;
 
   return (
-    <div
-      style={{
-        padding: '12px',
-        backgroundColor: '#f5f5f5',
-        borderRadius: '6px',
-        fontSize: '13px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-      }}
-    >
-      <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>Stockage</div>
-
+    <>
       {quotaBar}
 
       <div
         style={{
           display: 'flex',
-          gap: '8px',
-          marginTop: '12px',
+          gap: 'var(--space-2)',
+          marginTop: 'var(--space-4)',
         }}
       >
         <button
           onClick={handleExport}
           disabled={loading}
+          className="btn-pill btn-pill--offline"
           style={{
             flex: 1,
-            padding: '8px 12px',
-            backgroundColor: '#2196f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
+            opacity: loading ? 0.55 : 1,
             cursor: loading ? 'default' : 'pointer',
-            opacity: loading ? 0.6 : 1,
-            fontSize: '12px',
           }}
         >
           {loading ? 'Sauvegarde…' : 'Exporter'}
@@ -193,16 +146,11 @@ export const StorageMeter: React.FC<StorageMeterProps> = ({ onExportComplete, on
         <button
           onClick={handleImportClick}
           disabled={loading}
+          className="btn-pill btn-pill--couches"
           style={{
             flex: 1,
-            padding: '8px 12px',
-            backgroundColor: '#4caf50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
+            opacity: loading ? 0.55 : 1,
             cursor: loading ? 'default' : 'pointer',
-            opacity: loading ? 0.6 : 1,
-            fontSize: '12px',
           }}
         >
           {loading ? 'Chargement…' : 'Importer'}
@@ -212,12 +160,12 @@ export const StorageMeter: React.FC<StorageMeterProps> = ({ onExportComplete, on
       {error && (
         <div
           style={{
-            marginTop: '8px',
-            padding: '8px',
-            backgroundColor: '#ffebee',
-            color: '#c62828',
-            borderRadius: '4px',
-            fontSize: '12px',
+            marginTop: 'var(--space-3)',
+            padding: '8px 12px',
+            backgroundColor: 'oklch(66% 0.2 27 / 0.12)',
+            color: 'var(--cat-compte-d)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.76rem',
           }}
         >
           {error}
@@ -227,17 +175,17 @@ export const StorageMeter: React.FC<StorageMeterProps> = ({ onExportComplete, on
       {success && (
         <div
           style={{
-            marginTop: '8px',
-            padding: '8px',
-            backgroundColor: '#e8f5e9',
-            color: '#2e7d32',
-            borderRadius: '4px',
-            fontSize: '12px',
+            marginTop: 'var(--space-3)',
+            padding: '8px 12px',
+            backgroundColor: 'oklch(90% 0.08 145 / 0.3)',
+            color: 'var(--cat-couches-d)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.76rem',
           }}
         >
           {success}
         </div>
       )}
-    </div>
+    </>
   );
 };

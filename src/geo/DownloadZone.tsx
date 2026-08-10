@@ -156,32 +156,45 @@ export const DownloadZone: React.FC<DownloadZoneProps> = ({
   const progressPercent = total > 0 ? Math.round((downloaded / total) * 100) : 0;
 
   return (
-    <div className="download-zone">
-      <h3>Télécharger la zone offline</h3>
-
+    <>
       {error && (
-        <div className="error-banner">
-          <p>{error}</p>
+        <div
+          style={{
+            marginTop: 'var(--space-3)',
+            padding: '8px 12px',
+            backgroundColor: 'oklch(66% 0.2 27 / 0.12)',
+            color: 'var(--cat-compte-d)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.76rem',
+          }}
+        >
+          {error}
         </div>
       )}
 
       {quota && (
-        <div className="quota-info">
-          <p>
-            Quota: {((quota.usage / 1024 / 1024).toFixed(1))} /{' '}
-            {((quota.quota / 1024 / 1024).toFixed(1))} Mo ({quota.percentUsed.toFixed(1)}%)
-          </p>
-          <div className="quota-bar">
-            <div
-              className="quota-fill"
-              style={{
-                width: `${Math.min(quota.percentUsed, 100)}%`,
-                backgroundColor: quota.percentUsed > 80 ? '#ef4444' : '#3b82f6',
-              }}
-            />
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <div className="gauge">
+            <div className="gauge-track">
+              <div
+                className="gauge-fill"
+                style={{
+                  width: `${Math.min(quota.percentUsed, 100)}%`,
+                }}
+              />
+            </div>
+            <div className="gauge-label">
+              <span>{(quota.usage / 1024 / 1024).toFixed(1)} / {(quota.quota / 1024 / 1024).toFixed(1)} Mo</span>
+              <span>{quota.percentUsed.toFixed(1)}%</span>
+            </div>
           </div>
           {quota.percentUsed > 80 && (
-            <button type="button" onClick={handleClearCache} className="button-secondary">
+            <button
+              type="button"
+              onClick={handleClearCache}
+              className="filter-chip"
+              style={{ marginTop: 'var(--space-3)' }}
+            >
               Vider le cache
             </button>
           )}
@@ -189,25 +202,27 @@ export const DownloadZone: React.FC<DownloadZoneProps> = ({
       )}
 
       {state === 'idle' && (
-        <button type="button" onClick={handleEstimate} className="button-primary">
+        <button type="button" onClick={handleEstimate} className="btn-pill btn-pill--offline" style={{ width: '100%', marginTop: 'var(--space-4)' }}>
           Estimer la taille
         </button>
       )}
 
-      {state === 'estimating' && <p>Estimation en cours...</p>}
+      {state === 'estimating' && (
+        <p className="card-body" style={{ marginTop: 'var(--space-3)' }}>
+          Estimation en cours...
+        </p>
+      )}
 
       {state === 'ready' && estimate && (
-        <div className="estimate-info">
-          <p>
-            <strong>{estimate.totalTiles} tuiles</strong> ×{' '}
-            <strong>{selectedLayerIds.length} couches</strong> ={' '}
-            <strong>{estimate.estimatedSizeMb.toFixed(1)} Mo</strong>
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <p className="card-body" style={{ marginBottom: 'var(--space-3)' }}>
+            <strong>{estimate.totalTiles} tuiles</strong> × <strong>{selectedLayerIds.length} couches</strong> = <strong>{estimate.estimatedSizeMb.toFixed(1)} Mo</strong>
           </p>
-          <div className="button-group">
-            <button type="button" onClick={handleDownload} className="button-primary">
+          <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+            <button type="button" onClick={handleDownload} className="btn-pill btn-pill--offline" style={{ flex: 1 }}>
               Télécharger
             </button>
-            <button type="button" onClick={() => setState('idle')} className="button-secondary">
+            <button type="button" onClick={() => setState('idle')} className="filter-chip">
               Annuler
             </button>
           </div>
@@ -215,41 +230,45 @@ export const DownloadZone: React.FC<DownloadZoneProps> = ({
       )}
 
       {state === 'downloading' && (
-        <div className="progress-info">
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${progressPercent}%`,
-              }}
-            />
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <div className="gauge">
+            <div className="gauge-track">
+              <div
+                className="gauge-fill"
+                style={{
+                  width: `${progressPercent}%`,
+                }}
+              />
+            </div>
           </div>
-          <p>
+          <p className="card-body" style={{ marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
             {downloaded} / {total} tuiles ({progressPercent}%)
           </p>
-          <button type="button" onClick={handleCancel} className="button-secondary">
+          <button type="button" onClick={handleCancel} className="filter-chip" style={{ width: '100%' }}>
             Annuler le téléchargement
           </button>
         </div>
       )}
 
       {state === 'complete' && (
-        <div className="success-banner">
-          <p>Téléchargement terminé. Vous pouvez maintenant utiliser la carte hors ligne.</p>
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <p className="card-body">
+            Téléchargement terminé. Vous pouvez maintenant utiliser la carte hors ligne.
+          </p>
         </div>
       )}
 
       {state === 'error' && (
-        <button type="button" onClick={() => setState('idle')} className="button-secondary">
+        <button type="button" onClick={() => setState('idle')} className="filter-chip" style={{ width: '100%', marginTop: 'var(--space-3)' }}>
           Réessayer
         </button>
       )}
 
-      <div className="help-text">
-        <p>Les tuiles seront téléchargées dans le cache du navigateur (mode offline).</p>
-        <p>Zoom: {minZoom}–{maxZoom}</p>
-        <p>Couches: {selectedLayerIds.join(', ')}</p>
-      </div>
-    </div>
+      {(state === 'idle' || state === 'ready') && (
+        <p className="card-body" style={{ marginTop: 'var(--space-3)', fontSize: '0.76rem' }}>
+          Zoom: {minZoom}–{maxZoom} · Couches: {selectedLayerIds.join(', ')}
+        </p>
+      )}
+    </>
   );
 };

@@ -90,147 +90,76 @@ export function AuthGate(): ReactNode {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={styles.heading}>Sauvegarde en ligne</h2>
-
-        {user ? (
-          // Signed in state
-          <div style={styles.signedInContent}>
-            <p style={styles.paragraph}>Connecté en tant que :</p>
-            <p style={styles.email}>{user.email}</p>
-            <button
-              onClick={handleSignOut}
-              disabled={isLoading}
-              style={{ ...styles.button, ...styles.buttonSecondary }}
-            >
-              {isLoading ? 'Déconnexion...' : 'Se déconnecter'}
-            </button>
+    <>
+      {user ? (
+        // Signed in state
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <p className="card-body" style={{ marginBottom: 'var(--space-2)' }}>Connecté en tant que :</p>
+          <div className="status-dot-row" style={{ marginBottom: 'var(--space-3)', fontSize: '0.78rem' }}>
+            <span className="status-dot status-dot--on" />
+            <span style={{ color: 'var(--td-ink)', fontSize: '0.76rem' }}>{user.email}</span>
           </div>
-        ) : (
-          // Signed out state
-          <div style={styles.signedOutContent}>
-            <p style={styles.paragraph}>
-              Tes données sont sauvegardées localement sur le téléphone.
-              Connecte-toi pour que tes sorties remontent aussi en ligne.
-            </p>
-            <input
-              type="email"
-              autoComplete="email"
-              inputMode="email"
-              placeholder="Ton e-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-              style={styles.input}
-            />
-            <button
-              onClick={handleSignIn}
-              disabled={isLoading}
-              style={{ ...styles.button, ...styles.buttonPrimary }}
-            >
-              {isLoading ? 'Envoi...' : 'Recevoir le lien'}
-            </button>
-          </div>
-        )}
-
-        {message && (
-          <div
+          <button
+            onClick={handleSignOut}
+            disabled={isLoading}
+            className="filter-chip"
             style={{
-              ...styles.message,
-              ...(message.type === 'error' ? styles.messageError : styles.messageSuccess),
+              width: '100%',
+              opacity: isLoading ? 0.55 : 1,
+              cursor: isLoading ? 'default' : 'pointer',
             }}
           >
-            {message.text}
-          </div>
-        )}
-      </div>
-    </div>
+            {isLoading ? 'Déconnexion...' : 'Se déconnecter'}
+          </button>
+        </div>
+      ) : (
+        // Signed out state
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <p className="card-body" style={{ marginBottom: 'var(--space-3)' }}>
+            Tes données sont sauvegardées localement sur le téléphone.
+            Connecte-toi pour que tes sorties remontent aussi en ligne.
+          </p>
+          <input
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="Ton e-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+            className="clay-input"
+            style={{ marginBottom: 'var(--space-3)' }}
+          />
+          <button
+            onClick={handleSignIn}
+            disabled={isLoading}
+            className="btn-pill"
+            style={{
+              width: '100%',
+              opacity: isLoading ? 0.55 : 1,
+              cursor: isLoading ? 'default' : 'pointer',
+            }}
+          >
+            {isLoading ? 'Envoi...' : 'Recevoir le lien'}
+          </button>
+        </div>
+      )}
+
+      {message && (
+        <div
+          style={{
+            marginTop: 'var(--space-3)',
+            padding: '8px 12px',
+            backgroundColor: message.type === 'error' ? 'oklch(66% 0.2 27 / 0.12)' : 'oklch(90% 0.08 145 / 0.3)',
+            color: message.type === 'error' ? 'var(--cat-compte-d)' : 'var(--cat-couches-d)',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: '0.76rem',
+          }}
+        >
+          {message.text}
+        </div>
+      )}
+    </>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '16px',
-  },
-  card: {
-    backgroundColor: 'var(--color-bg-secondary, #f5f5f5)',
-    borderRadius: '8px',
-    padding: '20px',
-    marginBottom: '20px',
-  },
-  heading: {
-    fontSize: '18px',
-    fontWeight: '600',
-    marginTop: 0,
-    marginBottom: '16px',
-    color: 'var(--color-text-primary, #000)',
-  },
-  paragraph: {
-    fontSize: '14px',
-    lineHeight: '1.5',
-    marginBottom: '12px',
-    color: 'var(--color-text-secondary, #666)',
-  },
-  email: {
-    fontSize: '14px',
-    fontWeight: '500',
-    marginBottom: '16px',
-    padding: '8px 12px',
-    backgroundColor: 'var(--color-bg-tertiary, #e8e8e8)',
-    borderRadius: '4px',
-    color: 'var(--color-text-primary, #000)',
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    marginBottom: '12px',
-    fontSize: '16px',
-    border: '1px solid var(--color-border, #ccc)',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-    color: 'var(--color-text-primary, #000)',
-    backgroundColor: 'var(--color-bg-input, #fff)',
-  },
-  button: {
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '16px',
-    fontWeight: '600',
-    borderRadius: '4px',
-    border: 'none',
-    cursor: 'pointer',
-    minHeight: '48px',
-    transition: 'opacity 0.2s',
-  },
-  buttonPrimary: {
-    backgroundColor: 'var(--color-primary, #007AFF)',
-    color: '#fff',
-  },
-  buttonSecondary: {
-    backgroundColor: 'var(--color-border, #ccc)',
-    color: 'var(--color-text-primary, #000)',
-  },
-  signedInContent: {
-    textAlign: 'center' as const,
-  },
-  signedOutContent: {},
-  message: {
-    marginTop: '12px',
-    padding: '12px',
-    borderRadius: '4px',
-    fontSize: '13px',
-    lineHeight: '1.4',
-  },
-  messageSuccess: {
-    backgroundColor: 'var(--color-success-bg, #d4edda)',
-    color: 'var(--color-success-text, #155724)',
-    border: '1px solid var(--color-success-border, #c3e6cb)',
-  },
-  messageError: {
-    backgroundColor: 'var(--color-error-bg, #f8d7da)',
-    color: 'var(--color-error-text, #721c24)',
-    border: '1px solid var(--color-error-border, #f5c6cb)',
-  },
-};

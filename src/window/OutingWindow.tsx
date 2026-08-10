@@ -58,49 +58,25 @@ export const OutingWindow: React.FC<OutingWindowProps> = ({
 
   if (!position) {
     return (
-      <div
-        style={{
-          padding: '12px',
-          background: '#f5f5f5',
-          borderRadius: '4px',
-          fontSize: '13px',
-          color: '#666',
-        }}
-      >
-        <strong>Fenêtre de sortie :</strong> Pas de position GPS
-      </div>
+      <p className="card-body" style={{ margin: 'var(--space-2) 0' }}>
+        Pas de position GPS
+      </p>
     );
   }
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: '12px',
-          background: '#f5f5f5',
-          borderRadius: '4px',
-          fontSize: '13px',
-          color: '#666',
-        }}
-      >
-        <strong>Fenêtre de sortie :</strong> Calcul en cours...
-      </div>
+      <p className="card-body" style={{ margin: 'var(--space-2) 0' }}>
+        Calcul en cours...
+      </p>
     );
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          padding: '12px',
-          background: '#fee',
-          borderRadius: '4px',
-          fontSize: '13px',
-          color: '#d32f2f',
-        }}
-      >
-        <strong>Fenêtre de sortie :</strong> {error}
-      </div>
+      <p className="card-body" style={{ margin: 'var(--space-2) 0', color: 'var(--cat-compte-d)' }}>
+        {error}
+      </p>
     );
   }
 
@@ -108,68 +84,67 @@ export const OutingWindow: React.FC<OutingWindowProps> = ({
     return null;
   }
 
-  const statusColors: Record<string, string> = {
-    now: '#4CAF50', // green
-    soon: '#FFA500', // orange
-    out_of_season: '#f44336', // red
-  };
+  const statusColors = {
+    now: { bg: 'oklch(90% 0.08 150 / 0.3)', border: 'var(--cat-couches-d)' },
+    soon: { bg: 'oklch(90% 0.09 55 / 0.3)', border: 'var(--cat-sortie-d)' },
+    out_of_season: { bg: 'oklch(66% 0.2 27 / 0.12)', border: 'var(--cat-compte-d)' },
+  } as const;
 
-  const statusLabels: Record<string, string> = {
+  const statusLabels = {
     now: 'MAINTENANT',
     soon: 'BIENTÔT',
     out_of_season: 'HORS SAISON',
-  };
+  } as const;
+
+  const status = recommendation.status as keyof typeof statusColors;
+  const colors = statusColors[status] ?? statusColors.out_of_season;
+  const label = statusLabels[status];
 
   return (
-    <div
-      style={{
-        background: statusColors[recommendation.status],
-        color: '#fff',
-        padding: '12px',
-        borderRadius: '4px',
-        marginBottom: '12px',
-      }}
-    >
-      <div
-        style={{
-          fontSize: '14px',
-          fontWeight: 'bold',
-          marginBottom: '4px',
-        }}
-      >
-        {statusLabels[recommendation.status]}
-      </div>
+    <>
+      <div style={{ marginTop: 'var(--space-3)' }}>
+        <p
+          style={{
+            fontSize: '0.82rem',
+            fontWeight: 800,
+            color: colors.border,
+            margin: '0 0 var(--space-2)',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
+          {label}
+        </p>
 
-      <div
-        style={{
-          fontSize: '12px',
-          marginBottom: '8px',
-          lineHeight: '1.4',
-        }}
-      >
-        {recommendation.reason}
-      </div>
+        <p className="card-body" style={{ marginBottom: 'var(--space-2)' }}>
+          {recommendation.reason}
+        </p>
 
-      {/* Detailed breakdown */}
-      <details
-        style={{
-          fontSize: '11px',
-          cursor: 'pointer',
-        }}
-      >
-        <summary style={{ fontWeight: 'bold' }}>Détails</summary>
-        <div style={{ marginTop: '6px', paddingLeft: '12px' }}>
-          <div>
-            <strong>Météo :</strong> {recommendation.details.weather}
+        <details style={{ cursor: 'pointer' }}>
+          <summary style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--td-ink-faint)' }}>
+            Détails
+          </summary>
+          <div style={{ marginTop: 'var(--space-2)', fontSize: '0.72rem', color: 'var(--td-ink-faint)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
+              <span>Météo</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--td-ink-soft)' }}>
+                {recommendation.details.weather}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)', marginBottom: 'var(--space-1)' }}>
+              <span>Calendrier</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--td-ink-soft)' }}>
+                {recommendation.details.calendar}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+              <span>Lumière</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--td-ink-soft)' }}>
+                {recommendation.details.daylight}
+              </span>
+            </div>
           </div>
-          <div>
-            <strong>Calendrier :</strong> {recommendation.details.calendar}
-          </div>
-          <div>
-            <strong>Jour :</strong> {recommendation.details.daylight}
-          </div>
-        </div>
-      </details>
-    </div>
+        </details>
+      </div>
+    </>
   );
 };

@@ -38,9 +38,25 @@ export function AutoPrefetchStatus() {
       return null;
   }
 
+  const progressPercent = state.phase === 'running' && state.total > 0
+    ? Math.round((state.downloaded / state.total) * 100)
+    : 0;
+
   return (
-    <p style={{ fontSize: '14px', color: '#444', margin: '8px 0' }}>
-      {text}
-    </p>
+    <div style={{ marginBottom: 'var(--space-3)' }}>
+      <p className="card-body" style={{ margin: '0 0 var(--space-2)' }}>
+        {text}
+      </p>
+      {state.phase === 'running' && state.total > 0 && (
+        <div className="gauge">
+          <div className="gauge-track" style={{ height: '6px' }}>
+            <div
+              className="gauge-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
