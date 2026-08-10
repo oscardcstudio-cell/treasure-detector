@@ -29,8 +29,13 @@ export async function isDatabaseEmpty(db: TreasureDB = getDatabase()): Promise<b
  */
 export async function detectDataLoss(db: TreasureDB = getDatabase()): Promise<boolean> {
   const empty = await isDatabaseEmpty(db);
-  const hasBackupMetadata = getLastBackupMetadata() !== null;
-  return empty && hasBackupMetadata;
+  const metadata = getLastBackupMetadata();
+  if (!empty || metadata === null) return false;
+  // Une sauvegarde vide n'est pas une perte : ignore les marqueurs à zéro
+  // (profils pollués par d'anciens auto-exports sur base vide).
+  const counts = metadata.entityCounts;
+  const total = counts.sessions + counts.trackPoints + counts.digPoints + counts.finds + counts.surfaceObservations;
+  return total > 0;
 }
 
 /**

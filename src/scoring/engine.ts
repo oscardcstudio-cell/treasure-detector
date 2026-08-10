@@ -18,6 +18,10 @@
 
 import { cellToBoundary, polygonToCells } from 'h3-js';
 import { Contribution, ScoreCell, ScoringConfig, TopoGeoJSON, Zone } from './types';
+import zoneConfig from '../../config/zone.json';
+
+// Invariant projet : la zone vient de config/zone.json, jamais en dur dans src/
+const ZONE_CENTER = zoneConfig.center as [number, number];
 
 const EARTH_RADIUS_M = 6371000;
 
@@ -154,7 +158,7 @@ function getCellCenter(h3Index: string): [number, number] {
     const boundary = cellToBoundary(h3Index, false);
 
     if (boundary.length === 0) {
-      return [0.18, 43.56]; // Fallback to zone center [lon, lat]
+      return ZONE_CENTER; // Fallback to zone center [lon, lat]
     }
 
     // Compute center as average of boundary points
@@ -172,7 +176,7 @@ function getCellCenter(h3Index: string): [number, number] {
     return [centerLng, centerLat]; // Return [lon, lat] for GeoJSON
   } catch {
     // Fallback if boundary computation fails
-    return [0.18, 43.56];
+    return ZONE_CENTER;
   }
 }
 

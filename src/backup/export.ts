@@ -10,6 +10,10 @@ import type { BackupPayload, BackupMetadata, PhotoData, FindWithPhotos, SurfaceO
 
 const BACKUP_METADATA_KEY = 'treasure_detector_last_backup';
 const BACKUP_TIMESTAMP_KEY = 'treasure_detector_last_backup_timestamp';
+const BACKUP_JSON_KEY = 'treasure_detector_last_backup_json';
+
+// localStorage plafonne à ~5 MB : au-delà on garde seulement les métadonnées
+const MAX_INLINE_BACKUP_BYTES = 4 * 1024 * 1024;
 
 /**
  * Export the entire database to a JSON string.
@@ -107,16 +111,26 @@ export async function exportDatabase(db: TreasureDB = getDatabase()): Promise<st
     },
   };
 
-  // Store metadata in localStorage (survives IndexedDB purge on iOS)
-  try {
-    localStorage.setItem(BACKUP_METADATA_KEY, JSON.stringify(metadata));
-    const timestamp: string = payload.exportedAt;
-    localStorage.setItem(BACKUP_TIMESTAMP_KEY, timestamp);
-  } catch (e) {
-    console.warn('Failed to save backup metadata to localStorage:', e);
+  // Store metadata in localStorage (survives IndexedDB purge on iOS).
+  // Base vide → pas de marqueur : sinon la détection de perte se déclenche
+  // à tort sur un profil neuf (dialogue « perte de données » au 1er lancement).
+  const totalEntities =
+    sessions.length + trackPoints.length + digPoints.length + finds.length + surfaceObservations.length;
+  const backupJson = JSON.stringify(payload);
+  if (totalEntities > 0) {
+    try {
+      localStorage.setItem(BACKUP_METADATA_KEY, JSON.stringify(metadata));
+      localStorage.setItem(BACKUP_TIMESTAMP_KEY, payload.exportedAt);
+      // Copie inline pour restauration en un clic si IndexedDB est purgé
+      if (backupJson.length <= MAX_INLINE_BACKUP_BYTES) {
+        localStorage.setItem(BACKUP_JSON_KEY, backupJson);
+      }
+    } catch (e) {
+      console.warn('Failed to save backup metadata to localStorage:', e);
+    }
   }
 
-  return JSON.stringify(payload);
+  return backupJson;
 }
 
 /**
@@ -197,8 +211,22 @@ export function clearBackupMetadata(): void {
   try {
     localStorage.removeItem(BACKUP_METADATA_KEY);
     localStorage.removeItem(BACKUP_TIMESTAMP_KEY);
+    localStorage.removeItem(BACKUP_JSON_KEY);
   } catch (e) {
     console.warn('Failed to clear backup metadata:', e);
+  }
+}
+
+/**
+ * Get the inline backup JSON stored in localStorage (if it fit).
+ * Used for one-click restore after an IndexedDB purge.
+ */
+export function getInlineBackupJson(): string | null {
+  try {
+    return localStorage.getItem(BACKUP_JSON_KEY);
+  } catch (e) {
+    console.warn('Failed to read inline backup:', e);
+    return null;
   }
 }
 
@@ -207,12 +235,16 @@ export function clearBackupMetadata(): void {
  * This is the "filet" for when sync fails or the phone is lost.
  */
 export async function setupAutoExport(db: TreasureDB = getDatabase()): Promise<void> {
+  // Sauvegarde SILENCIEUSE (localStorage) uniquement : pas de saveBackupToFile ici.
+  // Sans geste utilisateur, showSaveFilePicker jette une SecurityError et le
+  // fallback déclenchait un téléchargement surprise à chaque changement d'onglet.
+  // Le fichier ne part que via le bouton « Exporter » du menu.
+
   // Export on visibility change (tab loses focus)
   document.addEventListener('visibilitychange', async () => {
     if (document.hidden) {
       try {
-        const backupJson = await exportDatabase(db);
-        await saveBackupToFile(backupJson);
+        await exportDatabase(db);
       } catch (e) {
         console.error('Auto-export on visibilitychange failed:', e);
       }
@@ -220,13 +252,9 @@ export async function setupAutoExport(db: TreasureDB = getDatabase()): Promise<v
   });
 
   // Export on beforeunload (page close/reload)
-  window.addEventListener('beforeunload', async () => {
-    try {
-      const backupJson = await exportDatabase(db);
-      // Note: async save won't complete in beforeunload, but metadata is saved synchronously to localStorage
-      saveBackupToFile(backupJson).catch((e) => console.error('Auto-export on beforeunload failed:', e));
-    } catch (e) {
-      console.error('Auto-export on beforeunload failed:', e);
-    }
+  window.addEventListener('beforeunload', () => {
+    // Best effort : l'async ne finira pas toujours avant la fermeture,
+    // mais visibilitychange (hidden) couvre déjà le cas mobile.
+    exportDatabase(db).catch((e) => console.error('Auto-export on beforeunload failed:', e));
   });
 }

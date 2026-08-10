@@ -2,7 +2,7 @@
  * Public API for backup/restore operations.
  */
 
-export { exportDatabase, saveBackupToFile, setupAutoExport, getLastBackupMetadata, clearBackupMetadata } from './export';
+export { exportDatabase, saveBackupToFile, setupAutoExport, getLastBackupMetadata, clearBackupMetadata, getInlineBackupJson } from './export';
 
 export { isDatabaseEmpty, detectDataLoss, importBackup, loadBackupFile, setupLossDetection } from './restore';
 

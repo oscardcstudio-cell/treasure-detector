@@ -183,9 +183,8 @@ async function upsertBatch(
 
   // Convert entries to rows for upsert
   // Filter out entries with changeType 'delete' (soft delete already marked in Dexie)
-  const rowsToUpsert = entries
-    .filter((e) => e.changeType === 'upsert')
-    .map((e) => convertToRow(e.payload as any));
+  const upsertEntries = entries.filter((e) => e.changeType === 'upsert');
+  const rowsToUpsert = upsertEntries.map((e) => convertToRow(e.payload as any));
 
   const rowsToDelete = entries.filter((e) => e.changeType === 'delete');
 
@@ -200,11 +199,7 @@ async function upsertBatch(
       }
 
       // Mark all upserted entries as succeeded
-      rowsToUpsert.forEach((_, idx) => {
-        if (idx < entries.length) {
-          succeeded.push(entries[idx]!);
-        }
-      });
+      succeeded.push(...upsertEntries);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       entries.forEach((e) => {

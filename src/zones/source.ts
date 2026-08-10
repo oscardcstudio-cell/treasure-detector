@@ -24,6 +24,14 @@ export async function loadSignaledZones(): Promise<SignaledZonesGeoJSON> {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
+    // Le serveur SPA renvoie index.html (200) pour un fichier absent :
+    // sans ce garde, response.json() jette et on logge une fausse erreur.
+    const contentType = response.headers?.get?.('content-type') ?? '';
+    if (contentType.includes('text/html')) {
+      console.info('Zones signalées non disponibles (fichier absent). Voir src/zones/README.md');
+      return { type: 'FeatureCollection', features: [] };
+    }
+
     const data = await response.json();
 
     // Valider la structure GeoJSON

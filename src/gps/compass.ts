@@ -55,6 +55,8 @@ export class CompassManager {
     }
 
     window.addEventListener('deviceorientation', this.handleOrientation);
+    // Marqueur "à l'écoute" — sans lui, chaque startWatching() empilerait un listener de plus
+    this.watchId = 1;
   }
 
   stopWatching(): void {
