@@ -237,22 +237,29 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
      * requestAnimationFrame pendant ~2 s après la création et après le 'load'
      * du style, le temps que fondu et premier affichage aboutissent.
      */
-    const pumpStart = performance.now();
-    let pumpSettledAt: number | null = null;
+    /**
+     * En build de prod, MapLibre ne se redessine pas de lui-même à l'arrivée
+     * des données (tuiles figées en plein fondu jusqu'au premier geste ; un
+     * réseau rapide masque le bug, un réseau lent le révèle). Pompe RELANÇABLE :
+     * chaque événement de données prolonge le pompage de ~1 s — le fondu de
+     * chaque tuile aboutit, quel que soit son retard. Coût nul au repos.
+     */
+    let pumpUntil = performance.now() + 3000;
     let pumpRaf: number | null = null;
     let pumpStopped = false;
-    const pump = () => {
+    const pumpLoop = () => {
       if (pumpStopped) return;
       instance.triggerRepaint();
-      const now = performance.now();
-      const settled = instance.isStyleLoaded() && instance.areTilesLoaded();
-      if (settled && pumpSettledAt === null) pumpSettledAt = now;
-      if (!settled) pumpSettledAt = null;
-      // Stop : 1,5 s après stabilisation (le temps du fondu), plafond 20 s
-      const done = (pumpSettledAt !== null && now - pumpSettledAt > 1500) || now - pumpStart > 20000;
-      pumpRaf = done ? null : requestAnimationFrame(pump);
+      pumpRaf = performance.now() < pumpUntil ? requestAnimationFrame(pumpLoop) : null;
     };
-    pump();
+    const pumpFor = (ms: number) => {
+      pumpUntil = Math.max(pumpUntil, performance.now() + ms);
+      if (pumpRaf === null && !pumpStopped) pumpLoop();
+    };
+    const onAnyData = () => pumpFor(1000);
+    instance.on('data', onAnyData);
+    instance.on('dataloading', onAnyData);
+    pumpLoop();
 
     /**
      * « Micro-geste » : en build, le premier calcul de couverture de tuiles
@@ -290,6 +297,8 @@ export default function MapView({ onMapReady, onScoredCellSelected }: MapViewPro
     return () => {
       pumpStopped = true;
       if (pumpRaf !== null) cancelAnimationFrame(pumpRaf);
+      instance.off('data', onAnyData);
+      instance.off('dataloading', onAnyData);
       window.clearTimeout(settleTimer);
       window.clearTimeout(nudgeTimer);
       resizeObserver?.disconnect();
