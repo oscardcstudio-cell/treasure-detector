@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>treasure-detector — terrain v1 (chrome haute-lisibilité)</title>
+<style>
+
+  /* ============================================================
+     DESIGN TOKENS — repris tels quels de mockup-hub-v1.html.
+     Source de vérité : design/mockup-hub-v1.html.
+     Cet écran ajoute une rampe "chrome sombre" (surface/texte inversés)
+     pour la lisibilité gants + plein soleil (§770 du plan) : même
+     géométrie/ombres/motion que le hub, valeurs de surface différentes.
+     ============================================================ */
+  :root {
+    --td-bg: oklch(96% 0.012 90);
+    --td-bg-deep: oklch(91% 0.016 90);
+    --td-surface: oklch(99% 0.004 90);
+    --td-surface-flat: oklch(100% 0 0);
+
+    --td-ink: oklch(24% 0.02 265);
+    --td-ink-soft: oklch(46% 0.018 265);
+    --td-ink-faint: oklch(64% 0.014 265);
+    --td-ink-on-clay: oklch(99% 0.01 90);
+
+    --cat-sortie-l: oklch(89% 0.09 55);
+    --cat-sortie-m: oklch(75% 0.155 46);
+    --cat-sortie-d: oklch(58% 0.16 36);
+
+    --cat-offline-l: oklch(89% 0.075 205);
+    --cat-offline-m: oklch(73% 0.12 208);
+    --cat-offline-d: oklch(55% 0.115 222);
+
+    --cat-stockage-l: oklch(88% 0.095 300);
+    --cat-stockage-m: oklch(71% 0.155 294);
+    --cat-stockage-d: oklch(54% 0.16 288);
+
+    --cat-couches-l: oklch(90% 0.105 140);
+    --cat-couches-m: oklch(75% 0.165 145);
+    --cat-couches-d: oklch(57% 0.15 150);
+
+    --cat-compte-l: oklch(89% 0.085 20);
+    --cat-compte-m: oklch(73% 0.165 17);
+    --cat-compte-d: oklch(57% 0.175 14);
+
+    --radius-sm: 14px;
+    --radius-md: 20px;
+    --radius-lg: 26px;
+    --radius-xl: 32px;
+    --radius-pill: 999px;
+
+    --shadow-ambient-sm: 0 3px 8px oklch(35% 0.03 270 / 0.10);
+    --shadow-ambient-md: 0 10px 22px oklch(35% 0.03 270 / 0.14);
+    --shadow-ambient-lg: 0 18px 38px oklch(35% 0.03 270 / 0.20);
+    --inset-highlight: inset 0 1.5px 0 oklch(100% 0 0 / 0.65), inset 0 -7px 12px oklch(0% 0 0 / 0.08);
+    --inset-highlight-strong: inset 0 2px 0 oklch(100% 0 0 / 0.85), inset 0 -9px 16px oklch(0% 0 0 / 0.12);
+    --inset-press: inset 0 3px 8px oklch(0% 0 0 / 0.18);
+
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", system-ui, sans-serif;
+    --font-body: -apple-system, "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
+
+    --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+    --dur-press: 150ms;
+    --dur-ui: 200ms;
+    --dur-reveal: 420ms;
+
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+    --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+
+    /* --- Chrome terrain : surfaces sombres à haut contraste ---
+       Pas de nouvelle teinte : mêmes valeurs oklch d'axe (h265, h90) que
+       le reste du système, seule la position sur l'axe L change. Kit
+       Consumption Rule : je flague — si adopté, ces 2 tokens rejoignent
+       le bloc :root du hub sous le nom --td-chrome-* / --td-chrome-ink. */
+    --td-chrome: oklch(20% 0.018 265);
+    --td-chrome-deep: oklch(14% 0.016 265);
+    --td-chrome-ink: oklch(97% 0.006 90);
+    --td-chrome-ink-soft: oklch(80% 0.01 90);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: oklch(22% 0.01 265);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+
+  .device-frame {
+    width: 375px;
+    height: 812px;
+    border-radius: 52px;
+    background: oklch(15% 0.01 265);
+    padding: 12px;
+    box-shadow: 0 40px 80px oklch(0% 0 0 / 0.5);
+    flex-shrink: 0;
+  }
+  .device-screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    background: var(--td-chrome-deep);
+  }
+
+  .app { height: 100%; position: relative; }
+
+  /* ============================================================
+     CARTE — placeholder neutre gris-vert texturé. PAS de vraie carte.
+     Grille de calage + blobs organiques (relief), trace de session,
+     point utilisateur. Purement scénographique.
+     ============================================================ */
+  .map-canvas {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 24% 30%, oklch(66% 0.055 145 / 0.55), transparent 42%),
+      radial-gradient(circle at 78% 62%, oklch(60% 0.05 150 / 0.5), transparent 46%),
+      radial-gradient(circle at 55% 18%, oklch(72% 0.03 95 / 0.4), transparent 38%),
+      linear-gradient(165deg, oklch(72% 0.045 130), oklch(58% 0.05 145) 55%, oklch(48% 0.045 150));
+    overflow: hidden;
+  }
+  .map-canvas::before {
+    /* grille de calage fine, décorative — jamais alignée sur du contenu réel */
+    content: "";
+    position: absolute;
+    inset: -40px;
+    background-image:
+      repeating-linear-gradient(0deg, oklch(100% 0 0 / 0.05) 0 1px, transparent 1px 46px),
+      repeating-linear-gradient(90deg, oklch(100% 0 0 / 0.05) 0 1px, transparent 1px 46px);
+  }
+  .map-track {
+    position: absolute;
+    width: 210px;
+    height: 340px;
+    left: 60px;
+    top: 220px;
+    border: 3px solid oklch(96% 0.01 90 / 0.55);
+    border-right: none;
+    border-bottom: none;
+    border-radius: 60px 0 0 0;
+    transform: rotate(-14deg);
+  }
+  .map-user-dot {
+    position: absolute;
+    left: 268px;
+    top: 402px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: oklch(65% 0.19 250);
+    box-shadow: 0 0 0 7px oklch(65% 0.19 250 / 0.28), var(--shadow-ambient-md);
+  }
+  .map-user-dot::after {
+    content: "";
+    position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    border: 2px solid oklch(65% 0.19 250 / 0.4);
+  }
+
+  /* ============================================================
+     HUD haut — surface chrome sombre, texte quasi-blanc en gras.
+     Contraste maximal volontairement : lisible gants + plein soleil.
+     Même géométrie/ombre que le hub (radius-lg, shadow-ambient +
+     inset-highlight) : c'est la VALEUR de surface qui s'inverse, pas
+     le vocabulaire de forme.
+     ============================================================ */
+  /* Empilement du chrome en flex column (pas de position:absolute +
+     offsets devinés) : hud-top -> spacer flexible (laisse voir la carte)
+     -> bottom-stack -> bottom-nav. Chevauchement structurellement
+     impossible, quelle que soit la hauteur de chaque bloc. */
+  .screen-fg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .fg-spacer { flex: 1; }
+  .hud-top {
+    flex-shrink: 0;
+    padding: calc(var(--space-3) + env(safe-area-inset-top, 8px)) var(--space-3) var(--space-3);
+    background: linear-gradient(180deg, oklch(14% 0.016 265 / 0.96), oklch(14% 0.016 265 / 0.86) 75%, transparent);
+  }
+  .hud-bar {
+    background: var(--td-chrome);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
+    padding: var(--space-3);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .hud-state {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: 0.78rem;
+    color: var(--td-chrome-ink);
+    flex-shrink: 0;
+  }
+  .hud-state-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--cat-couches-m);
+    box-shadow: 0 0 0 4px oklch(75% 0.165 145 / 0.28);
+  }
+  .hud-divider {
+    width: 1px;
+    align-self: stretch;
+    background: oklch(100% 0 0 / 0.14);
+    flex-shrink: 0;
+  }
+  .hud-metrics {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+  }
+  .hud-metric {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: var(--td-chrome-ink);
+    white-space: nowrap;
+  }
+  .hud-metric-icon {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px oklch(0% 0 0 / 0.5));
+  }
+  .hud-metric-sub {
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: var(--td-chrome-ink-soft);
+  }
+  .hud-controls {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+  .hud-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: oklch(100% 0 0 / 0.1);
+    box-shadow: var(--inset-highlight);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease;
+  }
+  .hud-btn:active { transform: scale(0.92); }
+  .hud-btn--end { background: linear-gradient(180deg, oklch(66% 0.2 27), oklch(52% 0.2 25)); }
+  .icon-pause { display: flex; gap: 3px; }
+  .icon-pause span { width: 3px; height: 12px; border-radius: 1px; background: var(--td-chrome-ink); }
+  .icon-stop { width: 11px; height: 11px; border-radius: 2px; background: var(--td-chrome-ink); }
+
+  /* ============================================================
+     BOTTOM STACK — actions rapides + why-sheet empilés en flex, PAS
+     en position absolute avec des offsets en dur. Un 1er essai en
+     pixels magiques (bottom: 152px) faisait recouvrir les boutons
+     d'action par le bottom-sheet dès que son contenu dépassait la
+     hauteur devinée — bug détecté à l'écran, pas à la lecture du
+     code. Le flex-stack rend le chevauchement structurellement
+     impossible, quelle que soit la hauteur du sheet.
+     ============================================================ */
+  .bottom-stack {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+
+  /* ACTIONS RAPIDES — boutons pleine largeur, cible tactile large,
+     remplissage SOLIDE saturé (pas de dégradé 3 tons comme le hub :
+     protège le contraste du label sous plein soleil), sheen glossy
+     restreint à un highlight haut fin, pas un lavage complet. */
+  .quick-actions {
+    padding: 0 var(--space-3);
+    display: flex;
+    gap: var(--space-3);
+  }
+  .qa-btn {
+    flex: 1;
+    height: 64px;
+    border: none;
+    border-radius: var(--radius-xl);
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform var(--dur-press) var(--ease-out-strong), box-shadow var(--dur-press) var(--ease-out-strong);
+  }
+  .qa-btn:active { transform: scale(0.96); }
+  .qa-btn--neutral {
+    color: var(--td-chrome-ink);
+    background: var(--td-chrome);
+    box-shadow: var(--shadow-ambient-lg), inset 0 1.5px 0 oklch(100% 0 0 / 0.18);
+  }
+  .qa-btn--neutral:active { box-shadow: var(--inset-press); }
+  .qa-btn--find {
+    color: oklch(16% 0.03 90);
+    background: var(--cat-sortie-m);
+    box-shadow: var(--shadow-ambient-lg), inset 0 1.5px 0 oklch(100% 0 0 / 0.5);
+  }
+  .qa-btn--find:active { box-shadow: var(--inset-press); }
+
+  /* ============================================================
+     WHY-SHEET — bottom sheet score, état "peek" par défaut (handle +
+     score visibles, contributions coupées avec fondu = affordance
+     "glisser pour tout voir"). Badge glossy (icône décorative seule) ;
+     le NUMÉRO repose sur une plaque chrome pleine, jamais sur le
+     dégradé — c'est la donnée la plus regardée de l'écran.
+     ============================================================ */
+  .why-sheet {
+    background: var(--td-chrome);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    box-shadow: 0 -4px 0 oklch(100% 0 0 / 0.06) inset, var(--shadow-ambient-lg);
+    padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 10px));
+    display: flex;
+    flex-direction: column;
+  }
+  .why-sheet-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: oklch(100% 0 0 / 0.22);
+    margin: 0 auto var(--space-3);
+  }
+  .why-sheet-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+  .score-badge {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 42% 46% 40% 48% / 46% 40% 50% 42%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(120% 130% at 30% 24%, var(--cat-sortie-l), var(--cat-sortie-m) 52%, var(--cat-sortie-d) 100%);
+    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
+  }
+  .score-badge img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 5px oklch(0% 0 0 / 0.5));
+  }
+  .why-sheet-score { flex: 1; min-width: 0; }
+  .score-value {
+    display: block;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.7rem;
+    line-height: 1;
+    color: var(--td-chrome-ink);
+  }
+  .score-max {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--td-chrome-ink-soft);
+  }
+  .score-cell {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--td-chrome-ink-soft);
+  }
+  .why-sheet-close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: oklch(100% 0 0 / 0.1);
+    color: var(--td-chrome-ink);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .why-sheet-body {
+    position: relative;
+    max-height: 96px;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .why-sheet-body::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 34px;
+    background: linear-gradient(180deg, transparent, var(--td-chrome));
+    pointer-events: none;
+  }
+  .why-row {
+    padding: var(--space-2) 0;
+    border-top: 1px solid oklch(100% 0 0 / 0.08);
+  }
+  .why-row:first-child { border-top: none; }
+  .why-row-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-bottom: 2px;
+  }
+  .why-row-main strong {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--td-chrome-ink);
+  }
+  .why-row-pts {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--cat-couches-m);
+    flex-shrink: 0;
+  }
+  .why-row-evidence {
+    margin: 0;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--td-chrome-ink-soft);
+  }
+  .why-flag {
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: oklch(66% 0.2 27 / 0.18);
+    border: 1px solid oklch(66% 0.2 27 / 0.4);
+    color: oklch(94% 0.05 27);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  /* ============================================================
+     BOTTOM NAV — variante chrome sombre du hub (même géométrie,
+     surface inversée pour rester lisible sur la carte plein cadre).
+     ============================================================ */
+  .bottom-nav {
+    flex-shrink: 0;
+    background: linear-gradient(180deg, var(--td-chrome), var(--td-chrome-deep));
+    border-top: 1px solid oklch(100% 0 0 / 0.08);
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.06);
+    display: flex;
+    padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom, 10px));
+    gap: var(--space-2);
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-2) 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease, box-shadow var(--dur-ui) ease;
+    color: var(--td-chrome-ink-soft);
+  }
+  .nav-item:active { transform: scale(0.94); }
+  .nav-item.is-active {
+    background: oklch(100% 0 0 / 0.1);
+    box-shadow: var(--inset-highlight);
+    color: var(--td-chrome-ink);
+  }
+  .nav-icon { width: 22px; height: 22px; display: grid; place-items: center; position: relative; }
+  .nav-icon-carte {
+    width: 14px; height: 18px;
+    border-radius: 50% 50% 50% 4px;
+    background: var(--td-chrome-ink-soft);
+    transform: rotate(-45deg);
+  }
+  .nav-item.is-active .nav-icon-carte { background: var(--cat-sortie-m); }
+  .nav-icon-carte::after {
+    content: "";
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--td-chrome-deep);
+    top: 3px; left: 4px;
+  }
+  .nav-icon-trouvailles {
+    width: 15px; height: 15px;
+    background: var(--td-chrome-ink-soft);
+    transform: rotate(45deg);
+    border-radius: 3px;
+  }
+  .nav-icon-menu { display: flex; gap: 3px; }
+  .nav-icon-menu span {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--td-chrome-ink-soft);
+  }
+  .nav-label { font-size: 0.66rem; font-weight: 700; }
+
+  /* ============================================================
+     LAYER PICKER WIDGET — drawer latéral translucide, 14 couches
+     groupées, fader opacité par couche, persistence visuelle de l'état.
+     Ouverture/fermeture via 180ms glissade + fade. Chrome cohérent.
+     ============================================================ */
+  .layer-picker-fab {
+    position: absolute;
+    bottom: 200px;
+    right: var(--space-3);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--td-chrome);
+    border: none;
+    box-shadow: var(--shadow-ambient-lg), var(--inset-highlight);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    z-index: 40;
+    transition: transform var(--dur-press) var(--ease-out-strong), background var(--dur-ui) ease;
+    color: var(--td-chrome-ink);
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+  .layer-picker-fab:active { transform: scale(0.92); }
+  .layer-picker-fab.is-open {
+    background: oklch(100% 0 0 / 0.1);
+  }
+
+  /* Drawer — glisse de droite, opaque, max-height scroll */
+  .layer-picker-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background: var(--td-chrome);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    box-shadow: -4px 0 16px oklch(0% 0 0 / 0.3), inset 1px 0 0 oklch(100% 0 0 / 0.1);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: transform var(--dur-ui) var(--ease-out-strong), opacity var(--dur-ui) var(--ease-out-strong);
+    pointer-events: none;
+  }
+  .layer-picker-drawer.is-open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Backdrop — semi-opaque, tappable pour fermer */
+  .layer-picker-backdrop {
+    position: fixed;
+    inset: 0;
+    background: oklch(0% 0 0 / 0.4);
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-ui) ease;
+  }
+  .layer-picker-backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Drawer header — titre + close */
+  .layer-picker-head {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4);
+    border-bottom: 1px solid oklch(100% 0 0 / 0.08);
+    gap: var(--space-3);
+  }
+  .layer-picker-title {
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: var(--td-chrome-ink);
+  }
+  .layer-picker-close {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: oklch(100% 0 0 / 0.1);
+    color: var(--td-chrome-ink);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--dur-press) ease;
+  }
+  .layer-picker-close:active { transform: scale(0.92); }
+
+  /* Body — scroll content */
+  .layer-picker-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  /* Group card */
+  .layer-group {
+    background: oklch(100% 0 0 / 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid oklch(100% 0 0 / 0.08);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .layer-group-title {
+    font-weight: 800;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--td-chrome-ink-soft);
+    margin-bottom: var(--space-1);
+  }
+
+  /* Layer item */
+  .layer-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+    border-top: 1px solid oklch(100% 0 0 / 0.05);
+  }
+  .layer-item:first-child { border-top: none; padding-top: 0; }
+
+  /* Layer vignette (mini preview) */
+  .layer-vignette {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    background: linear-gradient(135deg, oklch(60% 0.06 150), oklch(50% 0.05 160));
+    border: 1px solid oklch(100% 0 0 / 0.1);
+    display: grid;
+    place-items: center;
+    font-size: 0.9rem;
+    color: var(--td-chrome-ink-soft);
+    font-weight: 700;
+  }
+
+  /* Layer info (name + fader) */
+  .layer-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .layer-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--td-chrome-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Fader container & input */
+  .layer-fader-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .layer-fader {
+    flex: 1;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: oklch(100% 0 0 / 0.12);
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  .layer-fader::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--cat-couches-m);
+    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
+    cursor: pointer;
+    transition: transform var(--dur-press) ease;
+  }
+  .layer-fader::-webkit-slider-thumb:active { transform: scale(1.15); }
+  .layer-fader::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--cat-couches-m);
+    border: none;
+    box-shadow: var(--shadow-ambient-md), var(--inset-highlight);
+    cursor: pointer;
+  }
+  .layer-fader::-moz-range-track { background: none; border: none; }
+  .layer-fader::-moz-range-progress { background: var(--cat-couches-m); }
+
+  .layer-opacity-value {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--td-chrome-ink-soft);
+    width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hud-top, .quick-actions, .why-sheet {
+      opacity: 0;
+      transform: translateY(-8px);
+      animation: dropIn var(--dur-reveal) var(--ease-out-strong) forwards;
+    }
+    .quick-actions { transform: translateY(8px); animation-name: riseIn; animation-delay: 60ms; }
+    .why-sheet { transform: translateY(16px); animation-name: riseIn; animation-delay: 100ms; }
+    @keyframes dropIn { to { opacity: 1; transform: translateY(0); } }
+    @keyframes riseIn { to { opacity: 1; transform: translateY(0); } }
+  }
+</style>
+</head>
+<body>
+
+  <div class="device-frame">
+    <div class="device-screen">
+      <div class="app">
+
+        <div class="map-canvas" aria-hidden="true">
+          <div class="map-track"></div>
+          <div class="map-user-dot"></div>
+        </div>
+
+        <div class="screen-fg">
+        <div class="hud-top">
+          <div class="hud-bar">
+            <span class="hud-state">
+              <span class="hud-state-dot"></span>
+              Actif
+            </span>
+            <span class="hud-divider"></span>
+            <span class="hud-metrics">
+              <span class="hud-metric">
+                <img src="icons/fluent-3d/gps.png" alt="" class="hud-metric-icon" />
+                ±4 m
+              </span>
+              <span class="hud-metric">
+                27 pts
+                <span class="hud-metric-sub">14:22</span>
+              </span>
+            </span>
+            <span class="hud-controls">
+              <button class="hud-btn" type="button" aria-label="Mettre en pause">
+                <span class="icon-pause"><span></span><span></span></span>
+              </button>
+              <button class="hud-btn hud-btn--end" type="button" aria-label="Terminer la session">
+                <span class="icon-stop"></span>
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <div class="fg-spacer"></div>
+
+        <div class="bottom-stack">
+          <div class="quick-actions">
+            <button class="qa-btn qa-btn--neutral" type="button">Creusé ici</button>
+            <button class="qa-btn qa-btn--find" type="button">Trouvaille</button>
+          </div>
+
+          <div class="why-sheet">
+            <div class="why-sheet-handle"></div>
+            <div class="why-sheet-head">
+              <span class="score-badge" aria-hidden="true">
+                <img src="icons/fluent-3d/cible-score.png" alt="" />
+              </span>
+              <div class="why-sheet-score">
+                <span class="score-value">78<span class="score-max">/100</span></span>
+                <span class="score-cell">Cellule H3 · noyau villageois d'Armous</span>
+              </div>
+              <button class="why-sheet-close" type="button" aria-label="Fermer">×</button>
+            </div>
+            <div class="why-sheet-body">
+              <div class="why-row">
+                <div class="why-row-main">
+                  <strong>Noyau villageois d'Armous</strong>
+                  <span class="why-row-pts">+34 pts</span>
+                </div>
+                <p class="why-row-evidence">Cadastre napoléonien : bâti dense en 1830, jamais loti depuis · cadastre_napoleon</p>
+              </div>
+              <div class="why-row">
+                <div class="why-row-main">
+                  <strong>Anomalie LiDAR (SVF)</strong>
+                  <span class="why-row-pts">+21 pts</span>
+                </div>
+                <p class="why-row-evidence">Dépression circulaire de 8 m compatible fondation · lidar_svf</p>
+              </div>
+              <div class="why-row">
+                <div class="why-row-main">
+                  <strong>Proximité voie antique</strong>
+                  <span class="why-row-pts">+14 pts</span>
+                </div>
+                <p class="why-row-evidence">À 60 m d'un tracé de voie secondaire présumée · bd_topo</p>
+              </div>
+              <div class="why-flag">Restriction : à 80 m d'un monument historique classé. Vérifie le périmètre avant de creuser.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Layer picker FAB + drawer -->
+        <button class="layer-picker-fab" id="layerPickerFab" type="button" aria-label="Couches" aria-expanded="false">⚙</button>
+
+        <div class="layer-picker-backdrop" id="layerPickerBackdrop"></div>
+        <div class="layer-picker-drawer" id="layerPickerDrawer">
+          <div class="layer-picker-head">
+            <h2 class="layer-picker-title">Couches</h2>
+            <button class="layer-picker-close" id="layerPickerCloseBtn" type="button" aria-label="Fermer">×</button>
+          </div>
+          <div class="layer-picker-body" id="layerPickerBody">
+            <!-- Groups injected by JS -->
+          </div>
+        </div>
+
+        <nav class="bottom-nav">
+          <button class="nav-item is-active" type="button">
+            <span class="nav-icon"><span class="nav-icon-carte"></span></span>
+            <span class="nav-label">Carte</span>
+          </button>
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-trouvailles"></span></span>
+            <span class="nav-label">Trouvailles</span>
+          </button>
+          <button class="nav-item" type="button">
+            <span class="nav-icon"><span class="nav-icon-menu"><span></span><span></span><span></span></span></span>
+            <span class="nav-label">Menu</span>
+          </button>
+        </nav>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Layer configuration — 14 couches, 5 groupes
+    const layerGroups = [
+      {
+        name: "Historiques",
+        layers: [
+          { id: "cassini", name: "Cassini z14", icon: "🗺️" },
+          { id: "etatmajor", name: "État-major", icon: "📋" },
+          { id: "cadastre1950", name: "Cadastre 1950", icon: "🏛️" }
+        ]
+      },
+      {
+        name: "Orthos",
+        layers: [
+          { id: "ortho1970", name: "Ortho '70", icon: "📸" },
+          { id: "ortho2000", name: "Ortho '00", icon: "📸" },
+          { id: "ortho2022", name: "Ortho '22", icon: "📸" }
+        ]
+      },
+      {
+        name: "Relief",
+        layers: [
+          { id: "lidarsvf", name: "LiDAR SVF", icon: "🏔️" },
+          { id: "lidarhill", name: "LiDAR hillshade", icon: "🏔️" }
+        ]
+      },
+      {
+        name: "Cadastre",
+        layers: [
+          { id: "cadastrePublic", name: "Parcelles public", icon: "📐" },
+          { id: "cadastrePrivate", name: "Parcelles privé", icon: "🔒" },
+          { id: "cadastreExclu", name: "Zones exclues", icon: "⛔" }
+        ]
+      },
+      {
+        name: "POI",
+        layers: [
+          { id: "topos", name: "Points topos IGN", icon: "🔸" },
+          { id: "archeo", name: "Sites archéo", icon: "⚱️" }
+        ]
+      }
+    ];
+
+    // State — persistence en sessionStorage
+    const layerState = {};
+    layerGroups.forEach(group => {
+      group.layers.forEach(layer => {
+        const stored = sessionStorage.getItem(`layer_${layer.id}`);
+        layerState[layer.id] = stored ? parseInt(stored) : 100;
+      });
+    });
+
+    // Render layer groups
+    function renderLayers() {
+      const body = document.getElementById("layerPickerBody");
+      body.innerHTML = layerGroups.map(group => `
+        <div class="layer-group">
+          <h3 class="layer-group-title">${group.name}</h3>
+          ${group.layers.map(layer => `
+            <div class="layer-item">
+              <div class="layer-vignette">${layer.icon}</div>
+              <div class="layer-info">
+                <div class="layer-name">${layer.name}</div>
+                <div class="layer-fader-container">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="${layerState[layer.id]}"
+                    class="layer-fader"
+                    data-layer-id="${layer.id}"
+                    aria-label="Opacité ${layer.name}"
+                  />
+                  <span class="layer-opacity-value">${layerState[layer.id]}%</span>
+                </div>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
+
+      // Event listeners sur les faders
+      body.querySelectorAll(".layer-fader").forEach(fader => {
+        fader.addEventListener("input", e => {
+          const layerId = e.target.dataset.layerId;
+          const value = parseInt(e.target.value);
+          layerState[layerId] = value;
+          sessionStorage.setItem(`layer_${layerId}`, value);
+          // Update affichage de l'opacité
+          e.target.parentElement.querySelector(".layer-opacity-value").textContent = `${value}%`;
+        });
+      });
+    }
+
+    // Gestion du drawer
+    const fab = document.getElementById("layerPickerFab");
+    const drawer = document.getElementById("layerPickerDrawer");
+    const backdrop = document.getElementById("layerPickerBackdrop");
+    const closeBtn = document.getElementById("layerPickerCloseBtn");
+
+    function openDrawer() {
+      drawer.classList.add("is-open");
+      backdrop.classList.add("is-open");
+      fab.classList.add("is-open");
+      fab.setAttribute("aria-expanded", "true");
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove("is-open");
+      backdrop.classList.remove("is-open");
+      fab.classList.remove("is-open");
+      fab.setAttribute("aria-expanded", "false");
+    }
+
+    fab.addEventListener("click", () => {
+      if (drawer.classList.contains("is-open")) {
+        closeDrawer();
+      } else {
+        openDrawer();
+      }
+    });
+
+    closeBtn.addEventListener("click", closeDrawer);
+    backdrop.addEventListener("click", closeDrawer);
+
+    // Render initial
+    renderLayers();
+  </script>
+
+</body>
+</html>
