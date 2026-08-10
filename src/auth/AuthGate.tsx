@@ -116,6 +116,8 @@ export function AuthGate(): ReactNode {
             </p>
             <input
               type="email"
+              autoComplete="email"
+              inputMode="email"
               placeholder="Ton e-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

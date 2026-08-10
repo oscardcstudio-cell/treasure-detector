@@ -70,7 +70,7 @@ export function recordSyncSuccess(): void {
  */
 export function getSyncMessage(status: SyncStatus): string {
   if (!status.isAuthenticated) {
-    return 'Sauvegarde inactive (non connecté)';
+    return 'Sauvegarde inactive';
   }
 
   if (!status.isOnline) {
@@ -109,7 +109,8 @@ export function getSyncMessage(status: SyncStatus): string {
  * Get the visual color for the sync badge.
  * Returns: 'green' (synced), 'orange' (pending), 'red' (offline or errors)
  */
-export function getSyncColor(status: SyncStatus): 'green' | 'orange' | 'red' {
+export function getSyncColor(status: SyncStatus): 'green' | 'orange' | 'red' | 'grey' {
+  if (!status.isAuthenticated) return 'grey';
   if (!status.isOnline) return 'red';
   if (status.photosFailed > 0) return 'red';
   if (status.queueSize > 0 || status.photosPending > 0) return 'orange';

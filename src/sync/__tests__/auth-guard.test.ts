@@ -142,7 +142,6 @@ describe('Sync auth guard', () => {
       const message = getSyncMessage(status);
 
       expect(message).toContain('Sauvegarde inactive');
-      expect(message).toContain('non connecté');
     });
 
     it('shows pending items when authenticated and online', () => {
@@ -180,7 +179,6 @@ describe('Sync auth guard', () => {
 
       // Should show "not authenticated" even though there are pending items
       expect(message).toContain('Sauvegarde inactive');
-      expect(message).toContain('non connecté');
     });
   });
 });

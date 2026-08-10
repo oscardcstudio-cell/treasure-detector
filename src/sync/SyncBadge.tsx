@@ -68,9 +68,10 @@ export const SyncBadge: React.FC = () => {
   const color = getSyncColor(status);
 
   const colorMap: Record<string, string> = {
-    green: '#4CAF50',
-    orange: '#FFA500',
-    red: '#f44336',
+    green: '#2e7d32',
+    orange: '#e65100',
+    red: '#c62828',
+    grey: '#757575',
   };
 
   return (

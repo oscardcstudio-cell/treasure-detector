@@ -14,8 +14,8 @@ export const LegalBanner: React.FC = () => {
         padding: '10px 12px',
         background: '#fff8e1',
         borderBottom: '1px solid #ffca28',
-        fontSize: '12px',
-        color: '#5d4037',
+        fontSize: '13px',
+        color: '#3e2723',
       }}
     >
       <p style={{ margin: 0 }}>

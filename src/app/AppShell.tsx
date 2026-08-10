@@ -97,18 +97,19 @@ export default function AppShell() {
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Top controls: view mode selector + sync badge */}
-      <div style={{ padding: '8px 12px', background: '#f5f5f5', borderBottom: '1px solid #ddd', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', zIndex: 100 }}>
-        <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+      <div style={{ padding: '8px 12px', background: '#f5f5f5', borderBottom: '1px solid #ddd', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', zIndex: 100 }}>
+        <div style={{ display: 'flex', gap: '8px', flex: 1, flexWrap: 'wrap', alignItems: 'center' }}>
           <button
           onClick={() => setViewMode('standard')}
           style={{
-            padding: '6px 12px',
-            background: viewMode === 'standard' ? '#0066cc' : '#ccc',
-            color: viewMode === 'standard' ? '#fff' : '#000',
+            padding: '10px 14px',
+            minHeight: '44px',
+            background: viewMode === 'standard' ? '#0d47a1' : '#e0e0e0',
+            color: viewMode === 'standard' ? '#fff' : '#222',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '8px',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: viewMode === 'standard' ? 'bold' : 'normal',
           }}
         >
@@ -117,26 +118,27 @@ export default function AppShell() {
         <button
           onClick={() => setViewMode('curtain')}
           style={{
-            padding: '6px 12px',
-            background: viewMode === 'curtain' ? '#0066cc' : '#ccc',
-            color: viewMode === 'curtain' ? '#fff' : '#000',
+            padding: '10px 14px',
+            minHeight: '44px',
+            background: viewMode === 'curtain' ? '#0d47a1' : '#e0e0e0',
+            color: viewMode === 'curtain' ? '#fff' : '#222',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '8px',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: viewMode === 'curtain' ? 'bold' : 'normal',
           }}
         >
           Rideau
         </button>
         {viewMode === 'curtain' && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '14px', flexWrap: 'wrap' }}>
             <label>
               Gauche:
               <select
                 value={curtainLeft}
                 onChange={(e) => setCurtainLeft(e.target.value as HistoricLayerId)}
-                style={{ marginLeft: '4px', fontSize: '12px', padding: '4px' }}
+                style={{ marginLeft: '4px', fontSize: '14px', padding: '8px', minHeight: '40px' }}
               >
                 <option value="cassini">Cassini</option>
                 <option value="etat-major">État-major</option>
@@ -149,7 +151,7 @@ export default function AppShell() {
               <select
                 value={curtainRight}
                 onChange={(e) => setCurtainRight(e.target.value as HistoricLayerId)}
-                style={{ marginLeft: '4px', fontSize: '12px', padding: '4px' }}
+                style={{ marginLeft: '4px', fontSize: '14px', padding: '8px', minHeight: '40px' }}
               >
                 <option value="cassini">Cassini</option>
                 <option value="etat-major">État-major</option>
@@ -203,9 +205,11 @@ export default function AppShell() {
             {showFoncierLayer && mapRef && <FoncierLayer map={mapRef} isVisible={showFoncierLayer} />}
           </>
         ) : tabMode === 'finds' ? (
-          <FindsList digs={[]} finds={new Map()} onDelete={async () => {}} />
+          <div style={{ padding: '12px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
+            <FindsList digs={[]} finds={new Map()} onDelete={async () => {}} />
+          </div>
         ) : (
-          <div style={{ padding: '12px', background: '#f5f5f5', overflowY: 'auto', flex: 1 }}>
+          <div style={{ padding: '12px 12px 32px', background: '#f5f5f5', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
             {/* Menu tab: settings, offline downloads, outing window, storage */}
             <div style={{ maxWidth: '600px', margin: '0 auto' }}>
               <h2 style={{ marginTop: 0 }}>Menu</h2>
@@ -230,9 +234,8 @@ export default function AppShell() {
                 />
               </div>
 
-              {/* Storage meter */}
+              {/* Storage meter (le composant affiche déjà son propre titre) */}
               <div style={{ marginBottom: '20px' }}>
-                <h3>Stockage</h3>
                 <StorageMeter />
               </div>
 
@@ -264,17 +267,40 @@ export default function AppShell() {
         )}
       </div>
 
+      {/* Start session — dans le flux (pas en overlay : un bouton flottant
+          recouvrait les sélecteurs de couches et le contenu des autres onglets) */}
+      {tabMode === 'map' && gpsSession.state === 'idle' && (
+        <div style={{ padding: '8px 12px', background: '#f5f5f5', borderTop: '1px solid #ddd' }}>
+          <button
+            onClick={handleStartSession}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: '#2e7d32',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+            }}
+          >
+            Démarrer la session
+          </button>
+        </div>
+      )}
+
       {/* Tab navigation (bottom) */}
-      <div style={{ display: 'flex', borderTop: '1px solid #ddd', background: '#f5f5f5', height: '50px' }}>
+      <div style={{ display: 'flex', borderTop: '1px solid #ddd', background: '#f5f5f5', minHeight: '56px', paddingBottom: 'env(safe-area-inset-bottom)' }}>
         <button
           onClick={() => setTabMode('map')}
           style={{
             flex: 1,
-            background: tabMode === 'map' ? '#0066cc' : 'transparent',
+            background: tabMode === 'map' ? '#0d47a1' : 'transparent',
             color: tabMode === 'map' ? '#fff' : '#000',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '15px',
             fontWeight: 'bold',
           }}
         >
@@ -284,11 +310,11 @@ export default function AppShell() {
           onClick={() => setTabMode('finds')}
           style={{
             flex: 1,
-            background: tabMode === 'finds' ? '#0066cc' : 'transparent',
+            background: tabMode === 'finds' ? '#0d47a1' : 'transparent',
             color: tabMode === 'finds' ? '#fff' : '#000',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '15px',
             fontWeight: 'bold',
           }}
         >
@@ -298,11 +324,11 @@ export default function AppShell() {
           onClick={() => setTabMode('menu')}
           style={{
             flex: 1,
-            background: tabMode === 'menu' ? '#0066cc' : 'transparent',
+            background: tabMode === 'menu' ? '#0d47a1' : 'transparent',
             color: tabMode === 'menu' ? '#fff' : '#000',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '12px',
+            fontSize: '15px',
             fontWeight: 'bold',
           }}
         >
@@ -317,30 +343,6 @@ export default function AppShell() {
           sessionId={gpsSession.sessionId || ''}
           onDigCreated={handleDigCreated}
         />
-      )}
-
-      {/* Start session button (overlay, only if no active session) */}
-      {gpsSession.state === 'idle' && (
-        <button
-          onClick={handleStartSession}
-          style={{
-            position: 'fixed',
-            bottom: '70px',
-            left: '12px',
-            right: '12px',
-            padding: '16px',
-            background: '#4CAF50',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            zIndex: 200,
-          }}
-        >
-          Démarrer la session
-        </button>
       )}
 
       {/* Preset overlay (shows when a cell is selected) */}
