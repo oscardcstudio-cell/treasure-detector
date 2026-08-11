@@ -318,6 +318,7 @@ export async function scoreZone(
       if (value > 0) {
         const contribution: Contribution = {
           criterion: criterion.label,
+          criterionId: criterion.id,
           weight: criterion.weight,
           value,
           evidence: criterion.evidence,

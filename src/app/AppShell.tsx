@@ -7,7 +7,9 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
+import { latLngToCell } from 'h3-js';
 import zoneConfig from '../../config/zone.json';
+import scoringConfig from '../../config/scoring.json';
 import MapView from '../map/MapView';
 import Curtain from '../map/Curtain';
 import { HistoricLayerId } from '../map/layers';
@@ -30,6 +32,8 @@ import { OutingWindow } from '../window/OutingWindow';
 import { ZonesLayer } from '../zones';
 import { FoncierLayer, LegalBanner } from '../foncier';
 import { AuthGate } from '../auth/AuthGate';
+import { PresetOverlay } from '../presets/PresetOverlay';
+import type { ScoreCell } from '../scoring/types';
 
 type ViewMode = 'standard' | 'curtain';
 type TabMode = 'map' | 'finds' | 'menu';
@@ -42,6 +46,7 @@ export default function AppShell() {
   const [mapRef, setMapRef] = useState<MapLibreMap | null>(null);
   const [showZonesLayer, setShowZonesLayer] = useState(true);
   const [showFoncierLayer, setShowFoncierLayer] = useState(false);
+  const [scoredCells, setScoredCells] = useState<ScoreCell[]>([]);
 
   // Creusages/trouvailles : données réelles + version pour rafraîchir liste et carte
   const [digs, setDigs] = useState<DigPoint[]>([]);
@@ -178,6 +183,24 @@ export default function AppShell() {
     gpsSession.currentPosition ? Math.round(gpsSession.currentPosition.coord[1] * 1000) : null,
   ]);
 
+  /**
+   * Cellule scorée sous la position GPS courante — pilote le recommandeur de
+   * preset (PresetOverlay). Résolution H3 identique à `scoreZone`
+   * (`scoringConfig.grid.resolution`) : une résolution différente ne
+   * retomberait jamais sur les mêmes index de cellule.
+   *
+   * Recalculé sur la position ARRONDIE (même garde-fou que `outingPosition`
+   * ci-dessus) : latLngToCell sur une position brute recalculerait à chaque
+   * tick GPS pour rien — la cellule H3 (~65 m de côté) ne change pas à cette
+   * fréquence.
+   */
+  const activeScoreCell = useMemo<ScoreCell | undefined>(() => {
+    if (!outingPosition || scoredCells.length === 0) return undefined;
+    const [lon, lat] = outingPosition;
+    const h3 = latLngToCell(lat, lon, scoringConfig.grid.resolution);
+    return scoredCells.find((c) => c.h3 === h3);
+  }, [outingPosition, scoredCells]);
+
   const sessionActive = gpsSession.state === 'active';
   const sessionPaused = gpsSession.state === 'paused';
   const sessionRunning = sessionActive || sessionPaused;
@@ -293,13 +316,17 @@ export default function AppShell() {
       <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {tabMode === 'map' ? (
           <>
-            {viewMode === 'standard' && <MapView onMapReady={setMapRef} />}
+            {viewMode === 'standard' && (
+              <MapView onMapReady={setMapRef} onScoredCellsChange={setScoredCells} />
+            )}
             {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
             {showZonesLayer && mapRef && <ZonesLayer map={mapRef} isVisible={showZonesLayer} />}
             {showFoncierLayer && mapRef && <FoncierLayer map={mapRef} isVisible={showFoncierLayer} />}
             {/* Creusages/trouvailles + quadrillage des passages précédents */}
             {mapRef && <DigsLayer map={mapRef} refreshKey={dataVersion} />}
             {mapRef && <TracesLayer map={mapRef} refreshKey={dataVersion + (sessionRunning ? 0 : 1000)} />}
+            {/* Réglages ACE 250 conseillés — apparaît quand le GPS entre dans une cellule scorée */}
+            {viewMode === 'standard' && <PresetOverlay activeCell={activeScoreCell} />}
           </>
         ) : tabMode === 'finds' ? (
           <div className="app-scroll">

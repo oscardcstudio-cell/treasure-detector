@@ -1,7 +1,8 @@
 // Scoring types — aligned with CONTRACTS.md
 
 export interface Contribution {
-  criterion: string;
+  criterion: string; // libellé humain (affiché dans WhyPanel) — PAS une clé de lookup
+  criterionId: string; // id du critère (config/scoring.json) — clé de `criterionToPreset`
   weight: number;
   value: number; // 0..1
   evidence: string;

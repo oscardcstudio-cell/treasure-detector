@@ -6,6 +6,7 @@ import scoringConfig from '../../config/scoring.json';
 import { LAYERS, BASEMAP_DEFAULTS, HistoricLayerId, LIDAR_LAYERS, LIDAR_LAYER_IDS, LidarLayerId } from './layers';
 import { initPMTilesProtocol, createPMTilesSource } from '../geo/pmtiles';
 import { ScoringLayer } from '../scoring/ScoringLayer';
+import type { ScoreCell } from '../scoring/types';
 import { TargetsLayer } from '../targets/TargetsLayer';
 
 interface MapState {
@@ -25,6 +26,9 @@ const STORAGE_KEY = 'treasure-detector:map-state';
 export interface MapViewProps {
   onMapReady?: (map: MapLibreMap) => void;
   // Heatmap non interactive (décision 2026-08-10) : plus de sélection de cellule
+  /** Cellules scorées, remontées une fois le calcul terminé — pour le
+   * recommandeur de preset piloté par la position GPS (AppShell). */
+  onScoredCellsChange?: (cells: ScoreCell[]) => void;
 }
 
 /**
@@ -93,7 +97,7 @@ function syncRasterLayer(
   );
 }
 
-export default function MapView({ onMapReady }: MapViewProps = {}) {
+export default function MapView({ onMapReady, onScoredCellsChange }: MapViewProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   /**
@@ -461,6 +465,7 @@ export default function MapView({ onMapReady }: MapViewProps = {}) {
             zoneConfig={zoneConfig}
             scoringConfig={scoringConfig as any}
             topoGeoJSON={topoGeoJSON}
+            onScored={onScoredCellsChange}
           />
         )}
         {mapInstance && <TargetsLayer map={mapInstance} />}

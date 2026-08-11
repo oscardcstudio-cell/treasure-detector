@@ -30,6 +30,7 @@ export interface PresetResolution {
  */
 function getDominantCriterion(cell: ScoreCell): {
   criterion: string;
+  criterionId: string;
   weight: number;
   value: number;
   evidence: string;
@@ -46,6 +47,7 @@ function getDominantCriterion(cell: ScoreCell): {
       max.score = product;
       max.criterion = {
         criterion: contrib.criterion,
+        criterionId: contrib.criterionId,
         weight: contrib.weight,
         value: contrib.value,
         evidence: contrib.evidence,
@@ -127,8 +129,11 @@ export function resolvePreset(
   }
 
   // Step 2: Map criterion to preset via criterionToPreset table
+  // Clé = criterionId (config/scoring.json .id), PAS le libellé humain `criterion`
+  // — un lookup par libellé ne matchait jamais rien, cf. commit qui a introduit
+  // `criterionId` : resolvePreset retombait systématiquement sur le fallback.
   const mapping = config.criterionToPreset as Record<string, string>;
-  const basePresetId = mapping[dominant.criterion];
+  const basePresetId = mapping[dominant.criterionId];
   if (!basePresetId) {
     // Criterion not in mapping — use fallback with warning
     const fallbackPreset = loadPreset(config.defaults.fallbackPresetId);

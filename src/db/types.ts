@@ -203,7 +203,8 @@ export interface ScoreCell {
   h3: string; // H3 cell index
   score: number; // 0..100
   contributions: Array<{
-    criterion: string; // e.g. "Noyau villageois d'Armous"
+    criterion: string; // e.g. "Noyau villageois d'Armous" — libellé humain, PAS une clé de lookup
+    criterionId: string; // e.g. "armous_village" — id du critère, clé de criterionToPreset
     weight: number; // base weight in config/scoring.json
     value: number; // 0..1, presence or severity of this criterion
     evidence: string; // human-readable explanation

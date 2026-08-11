@@ -23,6 +23,9 @@ interface ScoringLayerProps {
   zoneConfig: any; // zone.json
   scoringConfig: ScoringConfig;
   topoGeoJSON: any; // toponymes.geojson
+  /** Appelé avec les cellules scorées une fois le calcul terminé — permet au
+   * parent (AppShell) de recommander un preset selon la position GPS. */
+  onScored?: (cells: ScoreCell[]) => void;
 }
 
 /**
@@ -69,6 +72,7 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
   zoneConfig,
   scoringConfig,
   topoGeoJSON,
+  onScored,
 }) => {
   const [isScored, setIsScored] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +93,7 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
       // Score the zone
       const cells = await scoreZone(scoringConfig, topoGeoJSON, zoneConfig);
       scoredCellsRef.current = cells;
+      onScored?.(cells);
 
       // Generate heatmap GeoJSON
       const heatmapGeoJSON = generateHeatMap(cells);
@@ -140,7 +145,7 @@ export const ScoringLayer: React.FC<ScoringLayerProps> = ({
       setError(msg);
       setIsLoading(false);
     }
-  }, [map, scoringConfig, topoGeoJSON, zoneConfig]);
+  }, [map, scoringConfig, topoGeoJSON, zoneConfig, onScored]);
 
   const handleToggleLayer = useCallback(() => {
     if (!map) return;

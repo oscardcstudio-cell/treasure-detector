@@ -23,12 +23,14 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'armous_village',
+            criterionId: 'armous_village',
             weight: 30,
             value: 0.8, // product = 24
             evidence: 'Village evidence',
           },
           {
             criterion: 'tuileries',
+            criterionId: 'tuileries',
             weight: 20,
             value: 0.5, // product = 10
             evidence: 'Tile evidence',
@@ -62,6 +64,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'armous_village',
+            criterionId: 'armous_village',
             weight: 30,
             value: 1.0,
             evidence: 'test',
@@ -79,6 +82,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'tuileries',
+            criterionId: 'tuileries',
             weight: 20,
             value: 1.0,
             evidence: 'test',
@@ -96,6 +100,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'caussade_via',
+            criterionId: 'caussade_via',
             weight: 24,
             value: 1.0,
             evidence: 'test',
@@ -113,6 +118,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'midour_source',
+            criterionId: 'midour_source',
             weight: 25,
             value: 1.0,
             evidence: 'test',
@@ -131,6 +137,7 @@ describe('Preset Resolution Engine', () => {
       contributions: [
         {
           criterion: 'caussade_via',
+          criterionId: 'caussade_via',
           weight: 24,
           value: 1.0,
           evidence: 'test',
@@ -175,6 +182,7 @@ describe('Preset Resolution Engine', () => {
       contributions: [
         {
           criterion: 'armous_village',
+          criterionId: 'armous_village',
           weight: 30,
           value: 1.0,
           evidence: 'test',
@@ -206,6 +214,7 @@ describe('Preset Resolution Engine', () => {
       contributions: [
         {
           criterion: 'caussade_via',
+          criterionId: 'caussade_via',
           weight: 24,
           value: 1.0,
           evidence: 'test',
@@ -276,6 +285,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'armous_village',
+            criterionId: 'armous_village',
             weight: 30,
             value: 1.0,
             evidence: 'test',
@@ -294,6 +304,7 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'moulin_bord_eau', // [5, 6]
+            criterionId: 'moulin_bord_eau',
             weight: 25,
             value: 1.0,
             evidence: 'test',
@@ -313,12 +324,14 @@ describe('Preset Resolution Engine', () => {
         contributions: [
           {
             criterion: 'armous_village',
+            criterionId: 'armous_village',
             weight: 30,
             value: 0.5, // product = 15
             evidence: 'test1',
           },
           {
             criterion: 'cau_village',
+            criterionId: 'cau_village',
             weight: 30,
             value: 0.5, // product = 15 (tie)
             evidence: 'test2',
