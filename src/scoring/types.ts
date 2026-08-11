@@ -60,10 +60,11 @@ export interface ScoringConfig {
 
 export interface TopoFeature {
   type: 'Feature';
-  geometry: {
-    type: 'Point';
-    coordinates: [number, number]; // [lon, lat]
-  };
+  // Point : toponymes/lieux ponctuels (Cassini, état-major).
+  // LineString/MultiLineString : entités linéaires (rivières, voies) — ex.
+  // data/derived/hydro_streams.geojson, en attente de T3.1 (cf. scoring.json
+  // critère `proximity_source`).
+  geometry: GeoJSON.Point | GeoJSON.LineString | GeoJSON.MultiLineString;
   properties: {
     name: string;
     rank: number;
