@@ -110,6 +110,35 @@ async function networkFirst(request: Request): Promise<Response> {
   }
 }
 
+/**
+ * Stale-while-revalidate : sert le cache tout de suite (offline-safe, zéro
+ * latence terrain) et rafraîchit en tâche de fond — la donnée est à jour au
+ * lancement suivant.
+ */
+async function staleWhileRevalidate(request: Request): Promise<Response> {
+  const cache = await caches.open(TILE_CACHE_NAME);
+  const cached = await cache.match(request);
+
+  const refresh = fetch(request)
+    .then(async (response) => {
+      if (response.ok && response.status === 200) {
+        await cache.put(request, response.clone()).catch(() => {
+          // Quota plein : tant pis pour le rafraîchissement du cache
+        });
+      }
+      return response;
+    })
+    .catch(() => undefined);
+
+  if (cached) {
+    void refresh; // rafraîchit en arrière-plan
+    return cached;
+  }
+  const fresh = await refresh;
+  if (fresh) return fresh;
+  return new Response('Offline', { status: 503 });
+}
+
 // Installation : pré-remplir le cache app avec les ressources critiques (injectManifest)
 self.addEventListener('install', (event: ExtendableEvent) => {
   event.waitUntil(
@@ -169,9 +198,11 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     return;
   }
 
-  // Autres données dérivées (GeoJSON) : cache-first
+  // Autres données dérivées (GeoJSON) : stale-while-revalidate.
+  // Cache-first figeait les cibles/foncier pour toujours sur l'appareil
+  // (constaté 2026-08-11 : nouvelles cibles jamais visibles côté téléphone).
   if (url.pathname.includes('/data/derived/')) {
-    event.respondWith(cacheTile(request));
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
