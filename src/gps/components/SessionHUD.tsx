@@ -31,7 +31,6 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({
   sessionState,
   currentPosition,
   heading,
-  pointsRecorded,
   batteryPercent,
   onPause,
   onResume,
@@ -103,12 +102,7 @@ export const SessionHUD: React.FC<SessionHUDProps> = ({
         </div>
       )}
 
-      {/* Points recorded */}
-      <div className="points-row" style={{ marginBottom: '1rem', fontSize: '14px' }}>
-        <div>
-          Points enregistrés: <strong>{pointsRecorded}</strong>
-        </div>
-      </div>
+      {/* Compteur de points retiré (retour terrain 2026-08-10 : bruit sans usage) */}
 
       {/* Battery */}
       {batteryPercent !== undefined && (

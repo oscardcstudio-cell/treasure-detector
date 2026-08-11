@@ -5,7 +5,7 @@
  * design/mockup-finds-v1.html (trouvailles). Voir src/design/clay.css.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Map as MapLibreMap } from 'maplibre-gl';
 import zoneConfig from '../../config/zone.json';
 import MapView from '../map/MapView';
@@ -13,9 +13,13 @@ import Curtain from '../map/Curtain';
 import { HistoricLayerId } from '../map/layers';
 import { QuickActions } from '../finds';
 import { FindsList } from '../finds';
+import { FindForm } from '../finds/FindForm';
+import { DigsLayer } from '../finds/DigsLayer';
+import { TracesLayer } from '../gps/TracesLayer';
 import { StorageMeter } from '../backup';
 import { getDatabase } from '../db/schema';
-import { DigPoint } from '../db/types';
+import { DigPoint, Find } from '../db/types';
+import { isSupabaseReady } from '../lib/supabase';
 import { useGPSSession } from './useGPSSession';
 import { useMapIntegration } from './useMapIntegration';
 import { SyncBadge } from '../sync/SyncBadge';
@@ -38,6 +42,32 @@ export default function AppShell() {
   const [mapRef, setMapRef] = useState<MapLibreMap | null>(null);
   const [showZonesLayer, setShowZonesLayer] = useState(true);
   const [showFoncierLayer, setShowFoncierLayer] = useState(false);
+
+  // Creusages/trouvailles : données réelles + version pour rafraîchir liste et carte
+  const [digs, setDigs] = useState<DigPoint[]>([]);
+  const [findsMap, setFindsMap] = useState<Map<string, Find>>(new Map());
+  const [dataVersion, setDataVersion] = useState(0);
+  const [activeFindDig, setActiveFindDig] = useState<DigPoint | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  // Charger creusages + trouvailles depuis la base locale
+  useEffect(() => {
+    (async () => {
+      try {
+        const db = getDatabase();
+        const [allDigs, allFinds] = await Promise.all([db.digPoints.toArray(), db.finds.toArray()]);
+        setDigs(allDigs.filter((d) => !d.deleted).sort((a, b) => b.at.localeCompare(a.at)));
+        setFindsMap(new Map(allFinds.filter((f) => !f.deleted).map((f) => [f.digPointId, f])));
+      } catch (e) {
+        console.error('Failed to load digs/finds:', e);
+      }
+    })();
+  }, [dataVersion]);
 
   // Initialize sync on mount (network listener)
   useEffect(() => {
@@ -84,14 +114,69 @@ export default function AppShell() {
     async (dig: Omit<DigPoint, 'id' | 'updatedAt' | 'deviceId'>) => {
       const db = getDatabase();
       try {
-        const digPoint = { ...dig, id: crypto.randomUUID(), updatedAt: new Date().toISOString(), deviceId: 'default' };
+        const digPoint: DigPoint = { ...dig, id: crypto.randomUUID(), updatedAt: new Date().toISOString(), deviceId: 'default' };
         await db.digPoints.add(digPoint);
+        setDataVersion((v) => v + 1);
+        if (dig.outcome === 'trouvaille') {
+          // Ouvrir la fiche d'annotation tout de suite (quoi, matière, note)
+          setActiveFindDig(digPoint);
+        } else {
+          showToast('Creusage enregistré — point posé sur la carte');
+        }
       } catch (e) {
         console.error('Failed to save dig point:', e);
+        showToast('Échec de l’enregistrement');
       }
     },
-    []
+    [showToast]
   );
+
+  const handleFindSave = useCallback(
+    async (find: Omit<Find, 'id' | 'updatedAt' | 'syncedAt' | 'deviceId' | 'deleted'>) => {
+      if (!activeFindDig) return;
+      const db = getDatabase();
+      try {
+        const full: Find = { ...find, id: crypto.randomUUID(), updatedAt: new Date().toISOString(), deviceId: 'default' };
+        await db.finds.add(full);
+        await db.digPoints.update(activeFindDig.id, { findId: full.id, updatedAt: new Date().toISOString() });
+        setActiveFindDig(null);
+        setDataVersion((v) => v + 1);
+        showToast('Trouvaille enregistrée — point posé sur la carte');
+      } catch (e) {
+        console.error('Failed to save find:', e);
+        showToast('Échec de l’enregistrement');
+      }
+    },
+    [activeFindDig, showToast]
+  );
+
+  const handleDelete = useCallback(async (id: string, type: 'dig' | 'find') => {
+    const db = getDatabase();
+    try {
+      // Suppression logique (jamais de DELETE réel — invariant sync)
+      if (type === 'dig') {
+        await db.digPoints.update(id, { deleted: true, updatedAt: new Date().toISOString() });
+      } else {
+        await db.finds.update(id, { deleted: true, updatedAt: new Date().toISOString() });
+      }
+      setDataVersion((v) => v + 1);
+    } catch (e) {
+      console.error('Failed to delete:', e);
+    }
+  }, []);
+
+  // La météo relit la position à chaque tick GPS : arrondir à ~100 m pour que
+  // la carte « Fenêtre de sortie » ne se recalcule pas en boucle (retour terrain :
+  // la section pompait/compressait sans arrêt, rendant le menu incliquable).
+  const outingPosition = useMemo<[number, number] | undefined>(() => {
+    const c = gpsSession.currentPosition?.coord;
+    if (!c) return undefined;
+    return [Math.round(c[0] * 1000) / 1000, Math.round(c[1] * 1000) / 1000];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    gpsSession.currentPosition ? Math.round(gpsSession.currentPosition.coord[0] * 1000) : null,
+    gpsSession.currentPosition ? Math.round(gpsSession.currentPosition.coord[1] * 1000) : null,
+  ]);
 
   const sessionActive = gpsSession.state === 'active';
   const sessionPaused = gpsSession.state === 'paused';
@@ -122,9 +207,6 @@ export default function AppShell() {
                   <span className="hud-metric">
                     <img src="/icons/fluent-3d/gps.png" alt="" className="hud-metric-icon" />
                     ±{Math.round(gpsSession.currentPosition.accuracyM)} m
-                  </span>
-                  <span className="hud-metric">
-                    {gpsSession.trackPointCount} pts
                   </span>
                 </>
               ) : sessionRunning ? (
@@ -215,6 +297,9 @@ export default function AppShell() {
             {viewMode === 'curtain' && <Curtain layerLeft={curtainLeft} layerRight={curtainRight} />}
             {showZonesLayer && mapRef && <ZonesLayer map={mapRef} isVisible={showZonesLayer} />}
             {showFoncierLayer && mapRef && <FoncierLayer map={mapRef} isVisible={showFoncierLayer} />}
+            {/* Creusages/trouvailles + quadrillage des passages précédents */}
+            {mapRef && <DigsLayer map={mapRef} refreshKey={dataVersion} />}
+            {mapRef && <TracesLayer map={mapRef} refreshKey={dataVersion + (sessionRunning ? 0 : 1000)} />}
           </>
         ) : tabMode === 'finds' ? (
           <div className="app-scroll">
@@ -227,7 +312,7 @@ export default function AppShell() {
                 <p>Creusages et objets de tes sorties.</p>
               </div>
             </header>
-            <FindsList digs={[]} finds={new Map()} onDelete={async () => {}} />
+            <FindsList digs={digs} finds={findsMap} onDelete={handleDelete} />
           </div>
         ) : (
           <div className="app-scroll">
@@ -248,17 +333,16 @@ export default function AppShell() {
               </button>
             )}
 
-            {/* Fenêtre de sortie */}
-            {gpsSession.currentPosition && (
+            {/* Fenêtre de sortie — position arrondie (~100 m) pour éviter le
+                recalcul en boucle à chaque tick GPS, hauteur mini stable */}
+            {outingPosition && (
               <div className="card card--wide reveal">
                 <span className="badge badge--sortie" aria-hidden="true">
                   <img src="/icons/fluent-3d/carte.png" alt="" />
                 </span>
-                <div className="card-main">
+                <div className="card-main" style={{ minHeight: '72px' }}>
                   <p className="card-title">Fenêtre de sortie</p>
-                  <OutingWindow
-                    position={[gpsSession.currentPosition.coord[0], gpsSession.currentPosition.coord[1]]}
-                  />
+                  <OutingWindow position={outingPosition} />
                 </div>
               </div>
             )}
@@ -335,7 +419,15 @@ export default function AppShell() {
               </span>
               <div className="card-main">
                 <p className="card-title">Compte</p>
-                <AuthGate />
+                {isSupabaseReady() ? (
+                  <AuthGate />
+                ) : (
+                  <p className="card-body" style={{ margin: 0 }}>
+                    Sauvegarde en ligne pas encore branchée — tes sorties restent
+                    enregistrées sur ce téléphone (et dans les sauvegardes locales).
+                    Rien à faire de ton côté pour l’instant.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -359,6 +451,69 @@ export default function AppShell() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Fiche trouvaille (après appui « Trouvaille ») ── */}
+      {activeFindDig && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 300,
+            background: 'oklch(14% 0.016 265 / 0.65)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              background: 'var(--td-bg)',
+              borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
+              padding: 'var(--space-4)',
+              paddingBottom: 'calc(var(--space-4) + env(safe-area-inset-bottom, 0px))',
+            }}
+          >
+            <FindForm
+              digPointId={activeFindDig.id}
+              onFindSave={handleFindSave}
+              onClose={() => {
+                setActiveFindDig(null);
+                showToast('Creusage gardé — tu pourras annoter depuis Trouvailles');
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast de confirmation ── */}
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(120px + env(safe-area-inset-bottom, 0px))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 400,
+            background: 'var(--td-chrome)',
+            color: 'var(--td-chrome-ink)',
+            borderRadius: 'var(--radius-pill)',
+            padding: '10px 18px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            boxShadow: 'var(--shadow-ambient-lg), var(--inset-highlight)',
+            whiteSpace: 'nowrap',
+            maxWidth: '92vw',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {toast}
         </div>
       )}
 
