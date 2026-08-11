@@ -157,9 +157,13 @@ Deux points décisifs :
 
 ### 3.3 Côté « app de détection »
 
-Rien de sérieux en open source : les 497 résultats sont des scripts de jeu FiveM, des magnétomètres de téléphone et de la détection de défauts métallurgiques. Les concurrents réels sont propriétaires ([LuckyFind](https://getluckyfind.com/), Tect O Trak) et **faibles sur les cartes anciennes** — c'est le différenciateur.
+Rien de sérieux en open source : les 497 résultats sont des scripts de jeu FiveM, des magnétomètres de téléphone et de la détection de défauts métallurgiques. Les concurrents réels sont propriétaires ([LuckyFind](https://getluckyfind.com/), Tect O Trak).
 
-**Le créneau est libre.** Rien sur quoi se greffer : on construit.
+**Correction (étude de marché, 2026-08-11) : la conclusion « créneau libre » ci-dessous était fausse.** [`GeoDetector`](https://www.prospection-de-loisir.fr/application-detection-geodetector/) (FR, iOS + Android, freemium) croise déjà cadastre napoléonien et cartes de Cassini avec la détection, plus identification d'objets par IA et communauté. Le vrai différenciateur qui reste à `treasure-detector` n'est pas « cartes anciennes » en soi mais la **profondeur** de lecture historique par commune (toponymie, sources académiques dépouillées) — qui ne scale pas comme fonctionnalité logicielle. Détail dans l'étude de marché demandée par Oscar le 2026-08-11 (non committée dans le repo, cf. conversation).
+
+~~Les concurrents réels sont propriétaires et **faibles sur les cartes anciennes** — c'est le différenciateur.~~
+
+~~**Le créneau est libre.** Rien sur quoi se greffer : on construit.~~ **Faux, voir correction ci-dessus.** Un concurrent occupe déjà exactement ce créneau (cartes anciennes + détection). On construit quand même, mais en connaissance de cause — cf. étude de marché du 2026-08-11.
 
 ---
 
