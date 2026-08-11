@@ -17,6 +17,10 @@ app.use(express.static(DIST_DIR, {
     // sw.js and index.html must not be cached long
     if (filePath.endsWith('sw.js') || filePath.endsWith('index.html')) {
       res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    } else if (filePath.includes(`${path.sep}data${path.sep}`)) {
+      // Données mutables (cibles, foncier, geojson…) : le maxAge global d'un an
+      // les figeait sur l'appareil — toujours revalider (le SW gère l'offline)
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     } else if (filePath.match(/\.[a-f0-9]{8}\.(js|css)$/)) {
       // Hashed assets can be cached forever
       res.setHeader('Cache-Control', 'public, immutable, max-age=31536000');

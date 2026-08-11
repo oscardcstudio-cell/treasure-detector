@@ -119,7 +119,9 @@ async function staleWhileRevalidate(request: Request): Promise<Response> {
   const cache = await caches.open(TILE_CACHE_NAME);
   const cached = await cache.match(request);
 
-  const refresh = fetch(request)
+  // no-cache : contourne le cache HTTP du navigateur (les anciennes réponses
+  // portaient max-age=1 an — la revalidation tournait à vide sinon)
+  const refresh = fetch(request, { cache: 'no-cache' })
     .then(async (response) => {
       if (response.ok && response.status === 200) {
         await cache.put(request, response.clone()).catch(() => {
