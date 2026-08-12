@@ -5,6 +5,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit
 COPY . .
+# Vite fige les VITE_* DANS le bundle au moment du build : sans ces ARG, les
+# variables de service Railway n'atteignent pas `npm run build` et l'app
+# déployée croit Supabase absent (sauvegarde en ligne muette).
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 RUN npm run build
 
 FROM node:22-alpine
