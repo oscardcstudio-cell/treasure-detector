@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 6am on monday"],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Mises à jour disponibles",
+  "prCreation": "approval",
+  "prConcurrentLimit": 3,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Patch + minor groupés en une seule entrée pour limiter le bruit",
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "mises à jour mineures"
+    },
+    {
+      "description": "Les majeures restent séparées — elles cassent",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"]
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "dependencyDashboardApproval": false,
+    "labels": ["security"]
+  }
+}
