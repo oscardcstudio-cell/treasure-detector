@@ -76,13 +76,93 @@ function getCellsForBbox(
   return polygonToCells([ring], resolution);
 }
 
+type ScorableGeometry = GeoJSON.Point | GeoJSON.LineString | GeoJSON.MultiLineString;
+
 /**
- * Apply proximity rule: buffer around point with linear degradation
+ * Distance point-segment en mètres, sur une projection équirectangulaire locale.
+ * Approximation planaire volontaire : à l'échelle d'une commune (quelques km),
+ * l'erreur induite est négligeable et évite de tirer une dépendance de calcul
+ * géodésique juste pour une distance point-segment.
+ */
+function pointToSegmentDistanceM(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  return Math.hypot(px - projX, py - projY);
+}
+
+/**
+ * Distance mini du point requêté (cellLat/cellLon) à une LineString, en mètres.
+ * Utilisé pour les rivières/voies dès qu'elles arrivent en géométrie linéaire
+ * réelle (au lieu d'un point représentatif) — cf. `proximity_source` (§6 CONTRACTS),
+ * bloqué sur `data/derived/hydro_streams.geojson` tant que T3.1 n'a pas tourné.
+ */
+function distanceToLineStringM(cellLat: number, cellLon: number, coordinates: GeoJSON.Position[]): number {
+  const lat0Rad = (cellLat * Math.PI) / 180;
+  // Le point requêté est l'origine locale (0,0) — les sommets sont projetés relativement à lui.
+  const toXY = (lon: number, lat: number): [number, number] => [
+    (lon - cellLon) * 111320 * Math.cos(lat0Rad),
+    (lat - cellLat) * 110540,
+  ];
+
+  let minDist = Infinity;
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const a = coordinates[i];
+    const b = coordinates[i + 1];
+    if (!a || !b) continue;
+    const [ax, ay] = toXY(a[0]!, a[1]!);
+    const [bx, by] = toXY(b[0]!, b[1]!);
+    const d = pointToSegmentDistanceM(0, 0, ax, ay, bx, by);
+    minDist = Math.min(minDist, d);
+  }
+  // LineString à un seul point dégénérée (ne devrait pas arriver, mais évite Infinity silencieux)
+  if (coordinates.length === 1 && coordinates[0]) {
+    const [x, y] = toXY(coordinates[0][0]!, coordinates[0][1]!);
+    minDist = Math.hypot(x, y);
+  }
+  return minDist;
+}
+
+/**
+ * Distance mini du point requêté à une géométrie Point/LineString/MultiLineString.
+ * Point → Haversine (distanceM, cohérent avec le reste du moteur).
+ * LineString/MultiLineString → distance point-segment sur projection locale.
+ */
+export function distanceToGeometryM(cellLat: number, cellLon: number, geometry: ScorableGeometry): number {
+  if (geometry.type === 'Point') {
+    const [lon, lat] = geometry.coordinates;
+    return distanceM(cellLon, cellLat, lon!, lat!);
+  }
+  if (geometry.type === 'LineString') {
+    return distanceToLineStringM(cellLat, cellLon, geometry.coordinates);
+  }
+  if (geometry.type === 'MultiLineString') {
+    let minDist = Infinity;
+    for (const line of geometry.coordinates) {
+      minDist = Math.min(minDist, distanceToLineStringM(cellLat, cellLon, line));
+    }
+    return minDist;
+  }
+  return Infinity;
+}
+
+/**
+ * Apply proximity rule: buffer around a feature (point ou ligne) avec dégradation linéaire
  */
 function applyProximity(
   cellLat: number,
   cellLon: number,
-  features: Array<{ geometry: { coordinates: [number, number] }; properties: any }>,
+  features: Array<{ geometry: ScorableGeometry; properties: any }>,
   bufferM: number,
   radiusM: number,
   falloff: number
@@ -90,8 +170,7 @@ function applyProximity(
   let maxValue = 0;
 
   for (const feature of features) {
-    const [featureLon, featureLat] = feature.geometry.coordinates;
-    const dist = distanceM(cellLon, cellLat, featureLon, featureLat);
+    const dist = distanceToGeometryM(cellLat, cellLon, feature.geometry);
     const value = degrade(dist, bufferM, radiusM, falloff);
     maxValue = Math.max(maxValue, value);
   }
@@ -100,19 +179,20 @@ function applyProximity(
 }
 
 /**
- * Apply corridor rule: buffer around a line (approximate via point expansion)
- * For now, treat as proximity to any feature point.
- * TODO: if linestring available, compute distance to line
+ * Apply corridor rule: buffer around a line (ou point tant qu'aucune géométrie
+ * linéaire réelle n'est disponible pour le critère — ex. caussade_via aujourd'hui).
+ * Même calcul de distance que la proximité : la distinction proximity/corridor
+ * reste sémantique (documente l'intention du critère dans scoring.json), pas
+ * technique, depuis que distanceToGeometryM gère nativement les LineStrings.
  */
 function applyCorridor(
   cellLat: number,
   cellLon: number,
-  features: Array<{ geometry: { coordinates: [number, number] }; properties: any }>,
+  features: Array<{ geometry: ScorableGeometry; properties: any }>,
   bufferM: number,
   radiusM: number,
   falloff: number
 ): number {
-  // Corridor is like proximity but with wider buffer
   return applyProximity(cellLat, cellLon, features, bufferM, radiusM, falloff);
 }
 
@@ -238,6 +318,7 @@ export async function scoreZone(
       if (value > 0) {
         const contribution: Contribution = {
           criterion: criterion.label,
+          criterionId: criterion.id,
           weight: criterion.weight,
           value,
           evidence: criterion.evidence,

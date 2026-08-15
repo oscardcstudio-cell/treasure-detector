@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { scoreZone, validateConfig, validateNoDuplicates } from '../engine';
 import { ScoringConfig, Zone } from '../types';
+import { resolvePreset } from '../../presets/resolve';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -103,6 +104,25 @@ describe('Scoring Integration — Real Data', () => {
     if (!validation.valid) {
       console.error('Double-count errors:', validation.errors);
     }
+  });
+
+  it('should resolve a real, non-fallback preset for the top scored cell (regression: criterionId lookup)', async () => {
+    // scoreZone().contributions[].criterion est un LIBELLÉ humain (ex. "Zone
+    // source du Midour — Hountan"), pas une clé de config/presets.json
+    // .criterionToPreset (clé = id, ex. "midour_source"). resolvePreset avait
+    // longtemps cherché la mauvaise clé et retombait toujours sur le preset de
+    // repli (labour_frais), quelle que soit la cellule réelle — jamais détecté
+    // car PresetOverlay n'était mounté nulle part dans l'app. Ce test tourne
+    // sur les vraies données (pas un fixture qui masque le bug par coïncidence).
+    const results = await scoreZone(config, topoGeoJSON, zone);
+    const scoredCells = results.filter((c) => c.score > 0).sort((a, b) => b.score - a.score);
+    expect(scoredCells.length).toBeGreaterThan(0);
+
+    const topCell = scoredCells[0]!;
+    const resolution = resolvePreset(topCell);
+
+    expect(resolution.why).not.toContain('non mappé');
+    expect(resolution.preset.id).not.toBe('labour_frais');
   });
 
   it('should provide evidence for all contributions', async () => {

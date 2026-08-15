@@ -148,22 +148,26 @@
     },
     {
       "id": "proximity_source",
-      "label": "Proximité à source — géographie de villa",
+      "label": "Proximité à un cours d'eau — géographie de villa et gués",
       "rank": "B",
       "weight": 12,
       "source": {
         "type": "vector",
         "path": "data/derived/hydro_streams.geojson",
         "status": "awaits_T3.1_vectorization",
-        "fallback": "buffer_500m_around_named_springs"
+        "fallback": "buffer_500m_around_named_springs",
+        "fetch_script": "tools/prep/hydro.py",
+        "blocker": "[MACHINE LOCALE] — proxy egress bloque data.geopf.fr depuis un conteneur d'agent (reconfirmé 2026-08-11). À exécuter par Oscar, puis repasser ce status à \"disponible\" une fois hydro_streams.geojson vérifié non vide.",
+        "engine_note": "src/scoring/engine.ts sait désormais mesurer une distance point-segment sur LineString/MultiLineString (fix 2026-08-11, testé). Reste à faire au moment d'activer ce critère : le moteur (scoreZone) ne charge aujourd'hui qu'UN SEUL GeoJSON passé par l'appelant (data/derived/toponymes.geojson, cf. MapView.tsx) — il faudra le faire charger aussi hydro_streams.geojson par source.path avant que ce critère produise un résultat."
       },
       "rule": {
-        "kind": "proximity",
+        "kind": "corridor",
         "buffer_m": 200,
+        "degradation": { "type": "linear", "radius_m": 400, "falloff": 0.4 },
         "applies_as_multiplier": false,
-        "notes": "Villas prefer water (drinking, mills, fords). Additive criterion (stacks with others)."
+        "notes": "Villas prefer water (drinking, mills, fords). Additive criterion (stacks with others). kind=corridor : un cours d'eau est une ligne, pas un point — distance mesurée au segment le plus proche, pas au sommet le plus proche."
       },
-      "justification": "Gallo-Roman villas positioned on slope with water access <200m. Rivers: Midour (source Hountan), Guillembounet, Mauran. PLAN §2.1, PLAN §9.4 villa implantation.",
+      "justification": "Gallo-Roman villas positioned on slope with water access <200m. Rivers: Midour (source Hountan), Guillembounet, Mauran. Gués = points de friction classiques (pertes de monnaie, ferrures) — PLAN §7 rang B 'Carrefour ancien, gué, franchissement'. PLAN §2.1, PLAN §9.4 villa implantation.",
       "evidence": "PLAN §2.1 hydro, hydronym toponymy"
     }
   ],

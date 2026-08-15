@@ -41,3 +41,14 @@ Déploiement UNIQUEMENT depuis `git archive HEAD` (jamais le working dir partag�
 ## Après la 1re sortie (calibrage — §13.2 du plan)
 
 Traces réelles → seuil `ratisse`/`passage_rapide` (0,45 m/s [HYPOTHÈSE]) · largeur d'arc réelle · fourchettes de sensibilité des presets sur `DigPoint` réels.
+
+## 2026-08-11 — rivières : le critère existait déjà, la donnée manquait
+
+Oscar a repéré à l'usage qu'une petite rivière (presque à sec) à côté de sa zone de session n'était scorée par rien. Vérifié dans le code : `proximity_source` (poids 12, rang B) existe bien dans `config/scoring.json` depuis T3.2, mais `status: "awaits_T3.1_vectorization"` — `data/derived/hydro_streams.geojson` n'a jamais été généré (T3.1 non exécuté, cf. plus haut). Pas un oubli de conception, un blocage de donnée connu.
+
+Fait dans la foulée :
+- **Bug réel corrigé** dans `src/scoring/engine.ts` : `applyProximity`/`applyCorridor` destructuraient `geometry.coordinates` comme un point `[lon,lat]` — sur une LineString (rivière) ça aurait donné une distance fausse ou `NaN` dès l'arrivée de vraie donnée hydro. Distance point-segment implémentée (projection locale équirectangulaire), testée (`src/scoring/__tests__/engine.test.ts`, cas dédiés géométrie linéaire). 271 tests verts, typecheck/lint sans régression.
+- `tools/prep/hydro.py` écrit (WFS `BDTOPO_V3:troncon_hydrographique`, même pattern que `foncier.py`) — **non exécuté**, `data.geopf.fr` bloqué par le proxy egress du conteneur (reconfirmé par un `curl` direct : 403). **[MACHINE LOCALE]**, à lancer par Oscar.
+- `proximity_source` : `rule.kind` passé à `corridor` (sémantique correcte pour une ligne), statut resté `awaits_T3.1_vectorization` — aucun changement de comportement en prod aujourd'hui.
+
+Reste à faire une fois `hydro_streams.geojson` généré et vérifié : `scoreZone` ne charge aujourd'hui qu'**un seul** GeoJSON (`toponymes.geojson`, câblé dans `MapView.tsx`) pour tous les critères — il faudra lui faire charger aussi la couche hydro avant que ce critère produise le moindre point de score. Pas fait ici : risque de casser un moteur qui tourne en prod sans donnée réelle pour le valider en retour.
