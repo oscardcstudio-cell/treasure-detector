@@ -157,9 +157,13 @@ Deux points décisifs :
 
 ### 3.3 Côté « app de détection »
 
-Rien de sérieux en open source : les 497 résultats sont des scripts de jeu FiveM, des magnétomètres de téléphone et de la détection de défauts métallurgiques. Les concurrents réels sont propriétaires ([LuckyFind](https://getluckyfind.com/), Tect O Trak) et **faibles sur les cartes anciennes** — c'est le différenciateur.
+Rien de sérieux en open source : les 497 résultats sont des scripts de jeu FiveM, des magnétomètres de téléphone et de la détection de défauts métallurgiques. Les concurrents réels sont propriétaires ([LuckyFind](https://getluckyfind.com/), Tect O Trak).
 
-**Le créneau est libre.** Rien sur quoi se greffer : on construit.
+**Correction (étude de marché, 2026-08-11, révisée après élargissement au marché anglophone) : la conclusion « créneau libre » ci-dessous était fausse, et plus largement fausse que la première correction ne le disait.** [`GeoDetector`](https://www.prospection-de-loisir.fr/application-detection-geodetector/) (FR, Android surtout, freemium) croise cadastre napoléonien et cartes de Cassini avec la détection — mais c'est un acteur régional faible, pas le vrai concurrent. Côté anglophone, le créneau est occupé depuis plus de dix ans par des produits établis et monétisés, natifs iOS + Android : [`Detector Maps`](https://detectormaps.com/uk/) (AU/US/UK/NZ/CA, 9 500+ cartes historiques, LiDAR hillshade, 8-35 $/mois), [`Rodek`](https://rodek.app/) (couverture mondiale, alertes de zone protégée, localisé en 4+ langues), [`RelicRoute`](https://www.relicroute.co.uk/) (UK, score de « détectabilité » par carreau de 1 km croisant LiDAR + cartes OS historiques + base PAS + géologie BGS — le plus proche conceptuellement du moteur de scoring de ce projet), [`DetectLogPro`](https://apps.apple.com/gb/app/detectlogpro-metal-detecting/id6759403130) (UK) et [`Maprika`](https://detecting.us/using-maprika-for-metal-detecting) (le doyen, documenté depuis 2012). Le vrai différenciateur qui reste à `treasure-detector` n'est pas « cartes anciennes » en soi mais la **profondeur** de lecture historique par commune (toponymie, sources académiques dépouillées) — face à des concurrents qui ont choisi la largeur (couverture nationale/mondiale) plutôt que la profondeur, et qui traitent déjà la conformité légale comme fonctionnalité vendable (alertes PAS/zones protégées) plutôt que comme angle mort. Détail dans l'étude de marché demandée par Oscar le 2026-08-11 (non committée dans le repo, cf. conversation).
+
+~~Les concurrents réels sont propriétaires et **faibles sur les cartes anciennes** — c'est le différenciateur.~~
+
+~~**Le créneau est libre.** Rien sur quoi se greffer : on construit.~~ **Faux, voir correction ci-dessus.** Un concurrent occupe déjà exactement ce créneau (cartes anciennes + détection). On construit quand même, mais en connaissance de cause — cf. étude de marché du 2026-08-11.
 
 ---
 
