@@ -22,6 +22,7 @@ Corollaire (hérité du meta racine) : **jamais « fait / vert / déployé » sa
 
 **Phase de plan + spike carto validé.** La vraie app (PWA React) n'est pas commencée.
 - `prototype/` = spike Leaflet jetable (superposition IGN + GPS + GPX). Valide les flux de données, **ne partage aucune ligne** avec la future PWA. Référence, pas base de code.
+- **Le spike est déployé et public** : <https://carto-armous-production.up.railway.app> — Cassini/État-Major en fondu sur satellite, cibles archéologiques, export GPX. Vérifié en direct le 2026-09-04 (chargé sans erreur console, tuiles affichées en ~8 s). Ne pas lire « la vraie app n'est pas commencée » comme « rien n'est visible » : il y a une démo cliquable, c'est le prototype.
 - Détail d'avancement, décisions figées et blocages en attente d'Oscar → [`memory/`](memory/).
 
 ## Stack cible (T0.1 à venir)
