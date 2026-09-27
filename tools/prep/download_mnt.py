@@ -4,7 +4,7 @@ T3.1 — Télécharger les dalles MNT LiDAR HD (0,5 m) couvrant la zone (étape 
 
 Méthode réelle (vérifiée 2026-08-08, machine locale) :
   1. Charger config/zone.json → `lidarBbox` (WGS84), repli sur `bbox`.
-  2. Découvrir les dalles via le WFS Géoplateforme, couche `IGNF_MNT-LIDAR-HD:dalle`.
+  2. Découvrir les dalles via le WFS Géoplateforme, couche `IGNF_LIDAR-HD_METADONNEE:metadata` (champ url_mnt).
      ATTENTION ordre des axes : BBOX en lat,lon + CRS urn:ogc:def:crs:EPSG::4326
      (l'ordre lon,lat renvoie silencieusement 0 dalle).
   3. Chaque feature porte une URL WMS-R GetMap `image/geotiff` (2000×2000 px,
@@ -22,6 +22,7 @@ dalles directement via rasterio.merge sur des fenêtres tamponnées.
 """
 
 import json
+from urllib.parse import parse_qs, urlparse
 import subprocess
 import sys
 from datetime import datetime
@@ -35,7 +36,7 @@ TILES_DIR = REPO_ROOT / "data" / "derived" / "mnt_tiles"
 LOGS_DIR = REPO_ROOT / "tools" / "prep" / "logs"
 
 WFS_URL = "https://data.geopf.fr/wfs/ows"
-WFS_LAYER = "IGNF_MNT-LIDAR-HD:dalle"
+WFS_LAYER = "IGNF_LIDAR-HD_METADONNEE:metadata"  # ex-IGNF_MNT-LIDAR-HD:dalle, renommée par l'IGN (400 « Unknown namespace » constaté le 2026-09-27)
 
 
 def load_zone_config() -> dict:
@@ -59,7 +60,12 @@ def discover_tiles(bbox_wgs84: list) -> list:
     r = requests.get(WFS_URL, params=params, timeout=120)
     r.raise_for_status()
     feats = r.json()["features"]
-    return [(f["properties"]["name_download"], f["properties"]["url"]) for f in feats]
+    tiles = []
+    for f in feats:
+        url = f["properties"]["url_mnt"]
+        name = parse_qs(urlparse(url).query)["FILENAME"][0]
+        tiles.append((name, url))
+    return sorted(set(tiles))  # une dalle peut apparaître sur plusieurs acquisitions
 
 
 def download_tiles(tiles: list, max_retries: int = 3):
