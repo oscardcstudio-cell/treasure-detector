@@ -172,7 +172,7 @@ export default function AppShell() {
     const c = gpsSession.currentPosition?.coord;
     if (!c) return undefined;
     return [Math.round(c[0] * 1000) / 1000, Math.round(c[1] * 1000) / 1000];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Deps volontairement arrondies (cf. commentaire ci-dessus), pas l'objet complet.
   }, [
     gpsSession.currentPosition ? Math.round(gpsSession.currentPosition.coord[0] * 1000) : null,
     gpsSession.currentPosition ? Math.round(gpsSession.currentPosition.coord[1] * 1000) : null,
