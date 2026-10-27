@@ -2,61 +2,21 @@
 > Web app (PWA) de prospection au détecteur de métaux — zone pilote Armous-et-Cau (Gers, 32). Croise cartes anciennes IGN + GPS terrain + scoring heuristique explicable.
 
 ## Vue d'ensemble
-- [CLAUDE.md](CLAUDE.md) : Instructions pour Claude Code — règles, invariants, état, flux IGN confirmés, git
+- [CLAUDE.md](CLAUDE.md) : Instructions pour Claude Code — règles, invariants, flux IGN confirmés
 - [docs/PLAN.md](docs/PLAN.md) : **Le contrat d'exécution** (~900 lignes) — architecture, contrat de données, scoring, 20 lots. Source de vérité
 - [docs/ONBOARDING.md](docs/ONBOARDING.md) : Mise au travail en 10 min, les 2 vérifs qui débloquent le projet
-- [README.md](README.md) : Vision du projet en 3 points, stack, licence
+- [README.md](README.md) : Vision du projet en 3 points, stack, commandes
 
-## Arborescence PWA (T0.1 complété)
-
-```
-treasure-detector/
-├── index.html                        # HTML entry point
-├── vite.config.ts                    # Vite + React + PWA plugin
-├── tsconfig.json                     # TypeScript strict
-├── package.json                      # npm scripts: dev, build, typecheck, lint
-├── railway.json                      # Nixpacks build + Node server.js
-├── server.js                         # Express server (Range support, cache headers)
-├── eslint.config.js                  # ESLint FlatConfig for v9
-│
-├── .github/workflows/ci.yml          # CI: typecheck, lint, build, gitleaks
-├── .env.example                      # Config template (Supabase optional for v0.1)
-│
-├── public/
-│   └── icon.svg                      # PWA icon (192x192 placeholder)
-│
-├── src/
-│   ├── main.tsx                      # React entry, PWA register
-│   ├── App.tsx                       # MapLibre GL minimal map, IGN tiles
-│   ├── index.css                     # Base styles (MapLibre override)
-│   └── lib/
-│       └── supabase.ts               # Client init (tolerates missing env vars)
-│
-├── config/
-│   ├── zone.json                     # Zone param: Armous-et-Cau center/bbox/zoom
-│   └── scoring.json                  # Scoring weights (editable, T3.2+)
-│
-├── docs/
-│   ├── PLAN.md                       # Contrat d'exécution (source de vérité)
-│   ├── ONBOARDING.md
-│   ├── CONTRACTS.md                  # (T0.2 — data types)
-│   ├── SCORING.md                    # (T3.2 — criteria + evidence)
-│   └── zone/
-│       ├── HISTOIRE.md               # (T2.1 — dépouillement)
-│       ├── SOURCES.md                # (T2.2 — archives et flux)
-│       ├── TOPONYMIE.md              # (T2.3 — microtoponymes gasconne)
-│       └── CIBLES.md                 # (T2.4 — locs Armous/Cau)
-│
-├── tools/prep/                       # (T3.1 — pipeline Python, hors app)
-├── data/
-│   ├── private/                      # [GITIGNORED] trouvailles, traces, photos
-│   └── derived/                      # [GITIGNORED] PMTiles, GeoJSON générés
-│
-└── memory/
-    ├── MEMORY.md
-    ├── ETAT.md
-    └── DECISIONS.md
-```
+## Fichiers critiques (> 300 lignes)
+- [src/map/MapView.tsx](src/map/MapView.tsx) : carte MapLibre principale, couches historiques, LiDAR, scoring, cibles
+- [src/app/AppShell.tsx](src/app/AppShell.tsx) : layout de l'app (design « glossy claymorphism », maquettes dans `design/`)
+- [src/map/Curtain.tsx](src/map/Curtain.tsx) : comparaison de deux couches historiques par rideau
+- [src/sync/push.ts](src/sync/push.ts) : vide la file de sync vers Supabase (upsert idempotent, ne modifie que `syncedAt`)
+- [src/scoring/engine.ts](src/scoring/engine.ts) : moteur de scoring pur, lit `config/scoring.json`, produit les `ScoreCell[]` H3
+- [src/finds/exchange.ts](src/finds/exchange.ts) : export/import GeoJSON et GPX sans perte
+- [tools/prep/proof_of_concept.py](tools/prep/proof_of_concept.py) : simulation du pipeline LiDAR sur données synthétiques
+- [config/zone.json](config/zone.json), [config/scoring.json](config/scoring.json) : zone et pondérations, paramètres (jamais en dur dans le code)
+- [server.js](server.js) : serveur Express statique (Range, cache) lancé par Railway
 
 ## Sections clés de PLAN.md (naviguer par §)
 - §0 : Conventions [FAIT]/[À VÉRIFIER]/[HYPOTHÈSE] — contraignantes pour tout agent
@@ -76,6 +36,7 @@ treasure-detector/
 - [memory/DECISIONS.md](memory/DECISIONS.md) : Décisions figées + ce qui attend Oscar
 
 ## Spike carto (référence jetable, PAS la future app)
+- Déployé publiquement : <https://carto-armous-production.up.railway.app> (Cassini/État-Major en fondu sur satellite, cibles archéologiques, export GPX)
 - [prototype/README.md](prototype/README.md) : Ce que le spike valide et ce qu'il n'est pas
 - [prototype/FINDINGS.md](prototype/FINDINGS.md) : Identifiants WMTS IGN confirmés, gotcha réseau IPv4, 16 cibles géolocalisées
 - [prototype/index.html](prototype/index.html) : Carte Leaflet mono-fichier (WMTS IGN + GPS + GPX)

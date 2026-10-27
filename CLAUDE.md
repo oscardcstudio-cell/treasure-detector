@@ -1,5 +1,7 @@
 # CLAUDE.md — treasure-detector
 
+> Hiérarchie : hérite de C:\dev\claude\CLAUDE.md et C:\dev\claude\oscardcstudio\CLAUDE.md
+
 Web app (PWA) de prospection au détecteur de métaux. Zone pilote : **Armous-et-Cau (Gers, 32230)**.
 Superpose cartes anciennes (Cassini, état-major, ortho IRC multi-millésime, LiDAR) aux cartes modernes, suit le GPS terrain, log creusages/trouvailles, et score les zones à fort potentiel — toujours en expliquant **pourquoi**.
 
@@ -16,16 +18,13 @@ Le plan distingue trois statuts, et les mélanger est l'erreur la plus coûteuse
 - **[À VÉRIFIER]** — plausible non confirmé. **Vérifier avant de bâtir dessus**, corriger le doc si faux.
 - **[HYPOTHÈSE]** — déduction sans source. **Ne pas transformer en contrainte.** Tester, ou demander à Oscar.
 
-Corollaire (hérité du meta racine) : **jamais « fait / vert / déployé » sans preuve produite dans le même tour** — sortie brute de test, capture de preview, `railway deployment list` → `SUCCESS`. Pas de preuve → écrire « fait, non vérifié ». Le plan a déjà été corrigé une fois pour cette raison (§2.1, hydrographie).
+Le plan a déjà été corrigé une fois pour un « fait » sans preuve (§2.1, hydrographie).
 
-## État actuel
+## Où en est le projet
 
-**Phase de plan + spike carto validé.** La vraie app (PWA React) n'est pas commencée.
-- `prototype/` = spike Leaflet jetable (superposition IGN + GPS + GPX). Valide les flux de données, **ne partage aucune ligne** avec la future PWA. Référence, pas base de code.
-- **Le spike est déployé et public** : <https://carto-armous-production.up.railway.app> — Cassini/État-Major en fondu sur satellite, cibles archéologiques, export GPX. Vérifié en direct le 2026-09-04 (chargé sans erreur console, tuiles affichées en ~8 s). Ne pas lire « la vraie app n'est pas commencée » comme « rien n'est visible » : il y a une démo cliquable, c'est le prototype.
-- Détail d'avancement, décisions figées et blocages en attente d'Oscar → [`memory/`](memory/).
+Avancement, décisions figées et blocages en attente d'Oscar → [`memory/`](memory/). `prototype/` = spike Leaflet jetable (référence, **ne partage aucune ligne** avec la PWA React) ; il est déployé publiquement, voir [`llms.txt`](llms.txt).
 
-## Stack cible (T0.1 à venir)
+## Stack
 
 PWA **React 19 + TS strict + Vite + MapLibre GL + PMTiles + Dexie (IndexedDB)** — local-first, offline natif.
 **Supabase** (Postgres + PostGIS + Storage) pour données/photos, **aucune API à écrire**. **Railway** héberge la PWA statique.
@@ -49,14 +48,11 @@ Identifiants WMTS vérifiés par `GetTile` réel — détail dans [`prototype/FI
 - **Gotcha réseau** : en conteneur, le proxy bloque `data.geopf.fr` → tâches `[MACHINE LOCALE]`. Sur Mac, `curl` échoue en IPv6 → forcer **`curl -4`** (le navigateur bascule seul). Gallica exige un **User-Agent navigateur** (403 sinon).
 - **Déploiement Railway** : `railway up` UNIQUEMENT depuis un export propre du dernier commit (`git archive HEAD | tar -x -C <tmp>` puis `railway link -p <id> -e production -s treasure-detector && railway up`) — jamais depuis le répertoire de travail : les fichiers en cours d'écriture d'agents parallèles partent dans le build et le cassent.
 
-## Git / GitHub
+## Git
 
-- Remote : **`oscardcstudio-cell`** (compte perso). Vérifier le bon compte avant push (`gh auth switch` si besoin — double compte sur la machine).
-- Repo **public** — objectif de prospection assumé. Commits en français, une intention par commit. Bugfix → ligne `Root cause: <cause systémique>`.
-- **Auto-push** après commit significatif (règle globale Engue).
+Repo **public** (objectif de prospection assumé) : jamais de coordonnée de trouvaille ni de secret dans un commit.
 
 ## Travail multi-agents (voir §8 du plan)
 
-Contrat d'abord (T0.2 = barrière) · **1 agent = 1 fichier** (ownership exclusif par lot) · review = N lentilles · integration-check final (T4.2, droit de veto).
-**Aucune commande git dans les prompts de sous-agents** (un agent a déjà `git restore` le travail non commité de tous les autres) — l'orchestrateur commit après chaque livraison.
-Modèles : `sonnet` pour code/recherche · `haiku` pour lookup pur · `opus` seulement sur T0.2. **Toujours passer `model` explicitement** à chaque `Agent` — sans ça il hérite du parent (opus), invisible sauf sur la facture.
+T0.2 (contrat de données) = barrière avant tout lot. Intégration finale T4.2 avec droit de veto.
+**Aucune commande git dans les prompts de sous-agents** (un agent a déjà `git restore` le travail non commité de tous les autres) : l'orchestrateur commit après chaque livraison.

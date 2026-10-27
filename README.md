@@ -4,13 +4,16 @@ Web app de prospection au détecteur de métaux. Zone pilote : **Armous-et-Cau (
 
 On superpose les cartes anciennes (Cassini, état-major 1820-1866, orthophotos infrarouge multi-millésime, relief LiDAR) aux cartes modernes, on suit sa position GPS sur le terrain pour savoir ce qui a déjà été ratissé, on enregistre creusages et trouvailles, et une couche de score signale les zones à fort potentiel — en expliquant toujours **pourquoi**.
 
-## État
+## Lancer
 
-**T0.1 scaffold complété** (2026-08-08). PWA React 19 + TypeScript strict + Vite 6 + MapLibre GL scaffold avec carte IGN minimale, client Supabase tolérant l'absence de config, PWA setup, serveur statique Railway, CI GitHub Actions. Build/typecheck/lint passent.
+```
+npm install
+npm run dev         # serveur Vite
+npm run typecheck && npm run lint && npm test
+npm run build       # build de production (dist/), servi par server.js
+```
 
-Prochaine étape : **T0.2 contrat de données** (bloquant pour tout le code).
-
-Nouveau sur le projet ? → **[`docs/ONBOARDING.md`](docs/ONBOARDING.md)** · Architecture complète → **[`docs/PLAN.md`](docs/PLAN.md)**
+Plan d'exécution : [`docs/PLAN.md`](docs/PLAN.md). Nouveau sur le projet : [`docs/ONBOARDING.md`](docs/ONBOARDING.md).
 
 ## L'idée en trois points
 
