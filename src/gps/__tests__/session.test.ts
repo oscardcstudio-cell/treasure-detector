@@ -124,7 +124,7 @@ describe('SweptArea computation', () => {
     const trace = generateQuadrillageTrace().slice(0, 100); // Use only first 100 points for speed
     const provider = new ReplayGeolocationProvider(trace, 5000); // very fast replay
 
-    provider.watch(
+    const watchId = provider.watch(
       async (fix) => {
         await session.recordFix({
           at: new Date(fix.timestamp).toISOString(),
@@ -141,7 +141,7 @@ describe('SweptArea computation', () => {
     // Wait for replay to complete
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    provider.clearWatch(0);
+    provider.clearWatch(watchId);
     await session.end();
 
     // Compute SweptArea
@@ -201,7 +201,7 @@ describe('SweptArea computation', () => {
     const trace = generateTraceWithGap();
     const provider = new ReplayGeolocationProvider(trace, 500);
 
-    provider.watch(
+    const watchId = provider.watch(
       async (fix) => {
         await session.recordFix({
           at: new Date(fix.timestamp).toISOString(),
@@ -216,7 +216,7 @@ describe('SweptArea computation', () => {
     // Wait for replay
     await new Promise((resolve) => setTimeout(resolve, trace.length * 50 + 500));
 
-    provider.clearWatch(0);
+    provider.clearWatch(watchId);
     await session.end();
 
     const sweptArea = await computeSweptArea(db, sessionId, 0.9);
