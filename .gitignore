@@ -51,3 +51,10 @@ public/data/*
 !public/data/derived/
 public/data/derived/*
 !public/data/derived/*.geojson
+
+# Logs / caches / outils
+*.log
+.cache/
+build/
+desktop.ini
+.playwright-mcp/
